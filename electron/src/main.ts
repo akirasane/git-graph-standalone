@@ -10,6 +10,7 @@ import { addRepository, buildMenu } from './menu';
 import { RepoManager } from './repoManager';
 import { Store } from './store';
 import { RequestMessage } from './types';
+import { checkForUpdates, initAutoUpdater } from './updater';
 import { GitExecutable, UNABLE_TO_FIND_GIT_MSG, findGit, showErrorMessage } from './utils';
 import { EventEmitter } from './utils/event';
 
@@ -76,6 +77,10 @@ async function activate() {
 
 	const win = createWindow();
 	ipcHandler = new GitGraphIpcHandler(win, dataSource, avatarManager, store, repoManager);
+
+	initAutoUpdater(win);
+	// Delayed so the update check never competes with the app's own initial repo-loading IPC traffic.
+	setTimeout(() => checkForUpdates(win, false), 5000);
 
 	Menu.setApplicationMenu(buildMenu(win, () => ipcHandler, dataSource, avatarManager, store, repoManager, () => gitExecutable));
 

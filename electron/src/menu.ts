@@ -7,6 +7,7 @@ import { CodeReviewData, CodeReviews, Store } from './store';
 import { RepoManager } from './repoManager';
 import { getConfig } from './config';
 import { PickerItem, showPicker } from './pickerWindow';
+import { checkForUpdates } from './updater';
 import { GitExecutable, abbrevCommit, abbrevText, copyToClipboard, getAppVersion, getRelativeTimeDiff, getRepoName, getSortedRepositoryPaths, showErrorMessage, showInformationMessage } from './utils';
 
 /**
@@ -55,6 +56,10 @@ export function buildMenu(
 					click: () => endSpecificCodeReview(store, repoManager, dataSource)
 				},
 				{ type: 'separator' },
+				{
+					label: 'Check for Updates...',
+					click: () => checkForUpdates(win, true)
+				},
 				{
 					label: 'Version',
 					click: () => showVersion(getGitExecutable)

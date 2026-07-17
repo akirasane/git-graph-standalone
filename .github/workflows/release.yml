@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Builds media/out.min.js + out.min.css from web/*.ts, which electron/index.html loads as
+      # a sibling folder outside electron/ itself (electron-builder's extraResources config
+      # bundles this into the packaged app - see electron/package.json).
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npm run compile
+
+      - name: Install electron dependencies
+        working-directory: electron
+        run: npm ci
+
+      # The pushed tag is the single source of truth for the release version - nobody has to
+      # remember to bump electron/package.json by hand before tagging.
+      - name: Set package version from tag
+        working-directory: electron
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
+
+      - name: Build and publish
+        working-directory: electron
+        run: npm run dist -- --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

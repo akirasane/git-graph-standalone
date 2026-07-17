@@ -50,7 +50,7 @@ export class Config {
 			fileViewType: this.config.get<string>('commitDetailsView.fileView.type', 'File Tree') === 'File List'
 				? FileViewType.List
 				: FileViewType.Tree,
-			location: this.config.get<string>('commitDetailsView.location', 'Inline') === 'Docked to Bottom'
+			location: this.config.get<string>('commitDetailsView.location', 'Docked to Bottom') === 'Docked to Bottom'
 				? CommitDetailsViewLocation.DockedToBottom
 				: CommitDetailsViewLocation.Inline
 		};

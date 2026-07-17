@@ -3186,6 +3186,9 @@ window.addEventListener('load', () => {
 	if (viewElem === null) return;
 
 	const gitGraph = new GitGraphView(viewElem, VSCODE_API.getState());
+	// Exposed read-only for the standalone Electron app's Working Copy panel (electron/index.html),
+	// which runs as a separate script and only ever reads `currentRepo` off this. No-op elsewhere.
+	(<any>window).gitGraph = gitGraph;
 	const imageResizer = new ImageResizer();
 
 	/* Command Processing */

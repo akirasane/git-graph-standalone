@@ -85,6 +85,118 @@
 		#addRepoBtn:hover{ background:#4a4a4a; }
 		#addRepoBtn:active{ border-color:var(--vscode-focusBorder); }
 		#controls{ padding-left:110px; }
+
+		/*
+		 * Right-side Commit Details panel (GitFlow Visualizer / "Terminal Velocity" mockup).
+		 * web/main.ts's "docked" mode is normally a full-width bar docked to the BOTTOM of the
+		 * view, resizable by height. Re-skinned here to dock to the RIGHT instead, resizable
+		 * width fixed for now - this is pure CSS repositioning of the existing docked DOM
+		 * (#cdv.docked, #cdvSummary, #cdvFiles, #cdvControls), not a change to web/main.ts, so
+		 * all existing behaviour (file tree, diff-possible clicks, code review, avatars) keeps
+		 * working unmodified. commitDetailsView.location defaults to "Docked to Bottom" (see
+		 * electron/src/config.ts) so this panel is what actually renders.
+		 */
+		:root{ --cdv-panel-width: 360px; }
+		/* Unconditional now: the right column is always reserved, either for the new Working
+		   Copy / Stash panel (#wcPanel, always in the DOM) or for #cdv.docked's commit-details
+		   content when a commit is expanded - both occupy the exact same box, see #wcPanel below. */
+		#view{
+			right: var(--cdv-panel-width) !important;
+			bottom: 0 !important;
+		}
+		#cdv.docked{
+			left: auto !important;
+			right: 0;
+			top: 41px; /* below #controls */
+			bottom: 0;
+			width: var(--cdv-panel-width);
+			height: auto !important;
+			background-color: var(--vscode-editorWidget-background);
+			border-left: 1px solid var(--vscode-menu-border);
+		}
+		/* Height-resize handle only makes sense for the old bottom-docked bar. */
+		#cdv.docked .cdvHeightResize{ display:none !important; }
+		/* Stack summary above the file list instead of the default left/right split - full
+		   width for both, since a 360px-wide panel is too narrow for a side-by-side split. */
+		#cdv.docked #cdvDivider{ display:none !important; }
+		#cdv.docked #cdvSummary{
+			top: 0 !important; left: 0 !important; right: 0 !important; width: auto !important;
+			bottom: auto !important; height: 180px !important;
+			border-right: none !important;
+			border-bottom: 1px solid var(--vscode-menu-border);
+			overflow-y: auto;
+		}
+		#cdv.docked #cdvFiles{
+			top: 180px !important; left: 0 !important; right: 0 !important; width: auto !important;
+			bottom: 0 !important;
+			border-right: none !important;
+		}
+
+		/*
+		 * Working Copy panel (stage/unstage/commit + stash tab). Occupies the exact same fixed
+		 * box as #cdv.docked above; electron/panel.js toggles which one is visible depending on
+		 * whether a commit is currently expanded in the graph (see its MutationObserver).
+		 */
+		#wcPanel{
+			position: fixed; right: 0; top: 41px; bottom: 0; width: var(--cdv-panel-width);
+			background-color: var(--vscode-editorWidget-background);
+			border-left: 1px solid var(--vscode-menu-border);
+			display: flex; flex-direction: column;
+			font-size: 13px; z-index: 5; overflow: hidden;
+		}
+		.wcTabs{ display: flex; border-bottom: 1px solid var(--vscode-menu-border); flex-shrink: 0; }
+		.wcTab{
+			flex: 1; padding: 8px 4px; text-align: center; cursor: pointer;
+			background: transparent; color: var(--vscode-menu-foreground); border: none;
+			border-bottom: 2px solid transparent; font-size: 12px;
+		}
+		.wcTab.active{ color: var(--vscode-editor-foreground); border-bottom-color: var(--vscode-focusBorder); }
+		.wcTabContent{ flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
+		.wcSection{ border-bottom: 1px solid var(--vscode-menu-border); flex-shrink: 0; max-height: 33%; display: flex; flex-direction: column; }
+		.wcSectionHeader{
+			display: flex; justify-content: space-between; align-items: center;
+			padding: 6px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+			color: var(--vscode-input-placeholderForeground); flex-shrink: 0;
+		}
+		.wcSmallBtn{
+			background: var(--vscode-menu-background); color: var(--vscode-menu-foreground);
+			border: 1px solid transparent; padding: 2px 8px; font-size: 11px; cursor: pointer; border-radius: 0;
+		}
+		.wcSmallBtn:hover{ background: #4a4a4a; }
+		.wcFileList{ list-style: none; margin: 0; padding: 0 0 6px 0; overflow-y: auto; }
+		.wcFileRow{
+			display: flex; align-items: center; gap: 6px; padding: 3px 10px; cursor: pointer;
+		}
+		.wcFileRow:hover{ background-color: rgba(128,128,128,0.15); }
+		.wcFileName{ flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.wcFileStats{ font-size: 11px; white-space: nowrap; }
+		.wcAdd{ color: var(--vscode-gitDecoration-addedResourceForeground); margin-right: 4px; }
+		.wcDel{ color: var(--vscode-gitDecoration-deletedResourceForeground); }
+		.wcFileAction{
+			background: transparent; color: var(--vscode-menu-foreground); border: 1px solid var(--vscode-menu-border);
+			width: 18px; height: 18px; line-height: 14px; padding: 0; cursor: pointer; border-radius: 0; flex-shrink: 0;
+		}
+		.wcFileAction:hover{ background: var(--vscode-menu-selectionBackground); color: var(--vscode-menu-selectionForeground); }
+		.wcEmpty{ padding: 6px 10px; color: var(--vscode-input-placeholderForeground); font-style: italic; }
+		.wcCommitSection{ padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+		.wcCommitSection input[type="text"], .wcCommitSection textarea{
+			background: var(--vscode-input-background); color: var(--vscode-input-foreground);
+			border: 1px solid transparent; padding: 4px 6px; font-family: inherit; font-size: 12px; resize: vertical;
+		}
+		.wcCommitSection input[type="text"]:focus, .wcCommitSection textarea:focus{
+			outline: none; border-color: var(--vscode-focusBorder);
+		}
+		.wcPushLabel{ font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+		.wcCommitBtn{
+			background: var(--vscode-focusBorder); color: #ffffff; border: none; padding: 6px; font-size: 12px;
+			cursor: pointer; border-radius: 0;
+		}
+		.wcCommitBtn:disabled{ background: var(--vscode-menu-background); color: var(--vscode-input-placeholderForeground); cursor: default; }
+		.wcMessage{ font-size: 11px; color: var(--vscode-gitDecoration-addedResourceForeground); min-height: 14px; }
+		.wcMessage.wcError{ color: var(--vscode-gitDecoration-deletedResourceForeground); }
+		.wcStashRow{ display: flex; align-items: center; gap: 6px; padding: 4px 10px; }
+		.wcStashMessage{ flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.wcStashActions{ display: flex; gap: 4px; flex-shrink: 0; }
 	</style>
 </head>
 <body>
@@ -107,10 +219,48 @@
 		<div id="footer"></div>
 	</div>
 	<div id="scrollShadow"></div>
+	<div id="wcPanel">
+		<div class="wcTabs">
+			<button type="button" class="wcTab active" data-tab="workingCopy">Working Copy</button>
+			<button type="button" class="wcTab" data-tab="stash">Stash</button>
+		</div>
+		<div id="wcTabWorkingCopy" class="wcTabContent">
+			<div class="wcSection">
+				<div class="wcSectionHeader">
+					<span>Unstaged Changes</span>
+					<button type="button" id="wcStageAllBtn" class="wcSmallBtn" title="Stage All Changes">Stage All</button>
+				</div>
+				<ul id="wcUnstagedList" class="wcFileList"></ul>
+			</div>
+			<div class="wcSection">
+				<div class="wcSectionHeader">
+					<span>Staged Changes</span>
+					<button type="button" id="wcUnstageAllBtn" class="wcSmallBtn" title="Unstage All Changes">Unstage All</button>
+				</div>
+				<ul id="wcStagedList" class="wcFileList"></ul>
+			</div>
+			<div class="wcCommitSection">
+				<input type="text" id="wcSummaryInput" placeholder="Commit summary" maxlength="72">
+				<textarea id="wcDescriptionInput" placeholder="Description (optional)" rows="3"></textarea>
+				<label class="wcPushLabel"><input type="checkbox" id="wcPushCheckbox"> Push after commit</label>
+				<button type="button" id="wcCommitBtn" class="wcCommitBtn" disabled>Commit</button>
+				<div id="wcCommitMessageArea" class="wcMessage"></div>
+			</div>
+		</div>
+		<div id="wcTabStash" class="wcTabContent" style="display:none">
+			<div class="wcSection" style="max-height:none; flex:1;">
+				<div class="wcSectionHeader">
+					<span>Stashes</span>
+					<button type="button" id="wcStashChangesBtn" class="wcSmallBtn" title="Stash all working copy changes">Stash Changes</button>
+				</div>
+				<ul id="wcStashList" class="wcFileList"></ul>
+			</div>
+		</div>
+	</div>
 	<script>
 		var initialState = {
 			config: {
-				"commitDetailsView": { "autoCenter": true, "fileTreeCompactFolders": true, "fileViewType": 1, "location": 0 },
+				"commitDetailsView": { "autoCenter": true, "fileTreeCompactFolders": true, "fileViewType": 1, "location": 1 },
 				"commitOrdering": "date",
 				"contextMenuActionsVisibility": {
 					"branch": { "checkout": true, "rename": true, "delete": true, "merge": true, "rebase": true, "push": true, "viewIssue": true, "createPullRequest": true, "createArchive": true, "selectInBranchesDropdown": true, "unselectInBranchesDropdown": true, "copyName": true },
@@ -205,5 +355,6 @@
 			window.electronAPI.addRepository();
 		});
 	</script>
+	<script src="panel.js"></script>
 </body>
 </html>

@@ -651,6 +651,69 @@ export interface ResponseCheckoutBranch extends ResponseWithMultiErrorInfo {
 	} | null; // NULL => Don't pull after checking out
 }
 
+/* Working Copy Panel (stage/unstage/commit/stash) - Electron standalone app only. */
+
+export interface RequestGetStagedChanges extends RepoRequest {
+	readonly command: 'getStagedChanges';
+}
+export interface ResponseGetStagedChanges extends BaseMessage {
+	readonly command: 'getStagedChanges';
+	readonly files: ReadonlyArray<GitFileChange>;
+	readonly error: ErrorInfo;
+}
+
+export interface RequestGetUnstagedChanges extends RepoRequest {
+	readonly command: 'getUnstagedChanges';
+}
+export interface ResponseGetUnstagedChanges extends BaseMessage {
+	readonly command: 'getUnstagedChanges';
+	readonly files: ReadonlyArray<GitFileChange>;
+	readonly error: ErrorInfo;
+}
+
+export interface RequestStageFile extends RepoRequest {
+	readonly command: 'stageFile';
+	readonly filePath: string;
+}
+export interface ResponseStageFile extends ResponseWithErrorInfo {
+	readonly command: 'stageFile';
+}
+
+export interface RequestUnstageFile extends RepoRequest {
+	readonly command: 'unstageFile';
+	readonly filePath: string;
+	readonly oldFilePath: string | null;
+}
+export interface ResponseUnstageFile extends ResponseWithErrorInfo {
+	readonly command: 'unstageFile';
+}
+
+export interface RequestStageAll extends RepoRequest {
+	readonly command: 'stageAll';
+}
+export interface ResponseStageAll extends ResponseWithErrorInfo {
+	readonly command: 'stageAll';
+}
+
+export interface RequestUnstageAll extends RepoRequest {
+	readonly command: 'unstageAll';
+}
+export interface ResponseUnstageAll extends ResponseWithErrorInfo {
+	readonly command: 'unstageAll';
+}
+
+export interface RequestCommitChanges extends RepoRequest {
+	readonly command: 'commitChanges';
+	readonly summary: string;
+	readonly description: string;
+	readonly push: boolean;
+}
+export interface ResponseCommitChanges extends BaseMessage {
+	readonly command: 'commitChanges';
+	readonly errors: ReadonlyArray<ErrorInfo>;
+	readonly pushSkippedReason: string | null;
+}
+
 export interface RequestCheckoutCommit extends RepoRequest {
 	readonly command: 'checkoutCommit';
 	readonly commitHash: string;
@@ -1253,6 +1316,13 @@ export type RequestMessage =
 	| RequestApplyStash
 	| RequestBranchFromStash
 	| RequestCheckoutBranch
+	| RequestCommitChanges
+	| RequestGetStagedChanges
+	| RequestGetUnstagedChanges
+	| RequestStageAll
+	| RequestStageFile
+	| RequestUnstageAll
+	| RequestUnstageFile
 	| RequestCheckoutCommit
 	| RequestCherrypickCommit
 	| RequestCleanUntrackedFiles
@@ -1317,6 +1387,13 @@ export type ResponseMessage =
 	| ResponseApplyStash
 	| ResponseBranchFromStash
 	| ResponseCheckoutBranch
+	| ResponseCommitChanges
+	| ResponseGetStagedChanges
+	| ResponseGetUnstagedChanges
+	| ResponseStageAll
+	| ResponseStageFile
+	| ResponseUnstageAll
+	| ResponseUnstageFile
 	| ResponseCheckoutCommit
 	| ResponseCherrypickCommit
 	| ResponseCleanUntrackedFiles

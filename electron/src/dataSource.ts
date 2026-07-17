@@ -1436,25 +1436,7 @@ export class DataSource extends Disposable {
 	 * @returns An array of `--name-status` records.
 	 */
 	private getDiffNameStatus(repo: string, fromHash: string, toHash: string, filter: string = 'AMDR') {
-		return this.execDiff(repo, fromHash, toHash, '--name-status', filter).then((output) => {
-			let records: DiffNameStatusRecord[] = [], i = 0;
-			while (i < output.length && output[i] !== '') {
-				let type = <GitFileStatus>output[i][0];
-				if (type === GitFileStatus.Added || type === GitFileStatus.Deleted || type === GitFileStatus.Modified) {
-					// Add, Modify, or Delete
-					let p = getPathFromStr(output[i + 1]);
-					records.push({ type: type, oldFilePath: p, newFilePath: p });
-					i += 2;
-				} else if (type === GitFileStatus.Renamed) {
-					// Rename
-					records.push({ type: type, oldFilePath: getPathFromStr(output[i + 1]), newFilePath: getPathFromStr(output[i + 2]) });
-					i += 3;
-				} else {
-					break;
-				}
-			}
-			return records;
-		});
+		return this.execDiff(repo, fromHash, toHash, '--name-status', filter).then((output) => this.parseDiffNameStatusRecords(output));
 	}
 
 	/**
@@ -1466,23 +1448,57 @@ export class DataSource extends Disposable {
 	 * @returns An array of `--numstat` records.
 	 */
 	private getDiffNumStat(repo: string, fromHash: string, toHash: string, filter: string = 'AMDR') {
-		return this.execDiff(repo, fromHash, toHash, '--numstat', filter).then((output) => {
-			let records: DiffNumStatRecord[] = [], i = 0;
-			while (i < output.length && output[i] !== '') {
-				let fields = output[i].split('\t');
-				if (fields.length !== 3) break;
-				if (fields[2] !== '') {
-					// Add, Modify, or Delete
-					records.push({ filePath: getPathFromStr(fields[2]), additions: parseInt(fields[0]), deletions: parseInt(fields[1]) });
-					i += 1;
-				} else {
-					// Rename
-					records.push({ filePath: getPathFromStr(output[i + 2]), additions: parseInt(fields[0]), deletions: parseInt(fields[1]) });
-					i += 3;
-				}
+		return this.execDiff(repo, fromHash, toHash, '--numstat', filter).then((output) => this.parseDiffNumStatRecords(output));
+	}
+
+	/**
+	 * Parse the output of a `--name-status` diff (shared by commit-to-commit diffs and the
+	 * staged/unstaged working copy diffs used by the Working Copy panel).
+	 * @param output The `-z`-separated output lines.
+	 * @returns An array of `--name-status` records.
+	 */
+	private parseDiffNameStatusRecords(output: string[]) {
+		let records: DiffNameStatusRecord[] = [], i = 0;
+		while (i < output.length && output[i] !== '') {
+			let type = <GitFileStatus>output[i][0];
+			if (type === GitFileStatus.Added || type === GitFileStatus.Deleted || type === GitFileStatus.Modified) {
+				// Add, Modify, or Delete
+				let p = getPathFromStr(output[i + 1]);
+				records.push({ type: type, oldFilePath: p, newFilePath: p });
+				i += 2;
+			} else if (type === GitFileStatus.Renamed) {
+				// Rename
+				records.push({ type: type, oldFilePath: getPathFromStr(output[i + 1]), newFilePath: getPathFromStr(output[i + 2]) });
+				i += 3;
+			} else {
+				break;
 			}
-			return records;
-		});
+		}
+		return records;
+	}
+
+	/**
+	 * Parse the output of a `--numstat` diff (shared by commit-to-commit diffs and the
+	 * staged/unstaged working copy diffs used by the Working Copy panel).
+	 * @param output The `-z`-separated output lines.
+	 * @returns An array of `--numstat` records.
+	 */
+	private parseDiffNumStatRecords(output: string[]) {
+		let records: DiffNumStatRecord[] = [], i = 0;
+		while (i < output.length && output[i] !== '') {
+			let fields = output[i].split('\t');
+			if (fields.length !== 3) break;
+			if (fields[2] !== '') {
+				// Add, Modify, or Delete
+				records.push({ filePath: getPathFromStr(fields[2]), additions: parseInt(fields[0]), deletions: parseInt(fields[1]) });
+				i += 1;
+			} else {
+				// Rename
+				records.push({ filePath: getPathFromStr(output[i + 2]), additions: parseInt(fields[0]), deletions: parseInt(fields[1]) });
+				i += 3;
+			}
+		}
+		return records;
 	}
 
 	/**
@@ -1738,6 +1754,119 @@ export class DataSource extends Disposable {
 	}
 
 
+	/* Working Copy Panel Methods */
+
+	/**
+	 * Get the staged changes, for the Working Copy panel.
+	 * @param repo The path of the repository.
+	 * @returns The staged file changes.
+	 */
+	public getStagedChanges(repo: string): Promise<{ files: GitFileChange[], error: ErrorInfo }> {
+		return Promise.all([
+			this.execDiffCached(repo, '--name-status').then((output) => this.parseDiffNameStatusRecords(output)),
+			this.execDiffCached(repo, '--numstat').then((output) => this.parseDiffNumStatRecords(output))
+		]).then((results) => ({
+			files: generateFileChanges(results[0], results[1], null),
+			error: null
+		})).catch((errorMessage) => ({ files: [], error: errorMessage }));
+	}
+
+	/**
+	 * Get the unstaged changes (including untracked files), for the Working Copy panel.
+	 * @param repo The path of the repository.
+	 * @returns The unstaged file changes.
+	 */
+	public getUnstagedChanges(repo: string): Promise<{ files: GitFileChange[], error: ErrorInfo }> {
+		return Promise.all([
+			this.execDiffPlain(repo, '--name-status').then((output) => this.parseDiffNameStatusRecords(output)),
+			this.execDiffPlain(repo, '--numstat').then((output) => this.parseDiffNumStatRecords(output)),
+			this.getStatus(repo)
+		]).then((results) => ({
+			// Only merge in the untracked files from `getStatus` - its `deleted` bucket includes
+			// STAGED deletions (porcelain index column), which would otherwise be double-counted
+			// here as well as in getStagedChanges; worktree-side deletions already come back from
+			// the plain `git diff` above.
+			files: generateFileChanges(results[0], results[1], { deleted: [], untracked: results[2].untracked }),
+			error: null
+		})).catch((errorMessage) => ({ files: [], error: errorMessage }));
+	}
+
+	/**
+	 * Determine whether HEAD resolves to a commit (i.e. the repository isn't a freshly initialised
+	 * repository with no commits yet), since `git reset` behaves differently in that case.
+	 * @param repo The path of the repository.
+	 * @returns TRUE => HEAD is a commit, FALSE => unborn HEAD (no commits yet).
+	 */
+	private hasHeadCommit(repo: string): Promise<boolean> {
+		return this.spawnGit(['rev-parse', '--verify', '--quiet', 'HEAD'], repo, () => true).then(() => true, () => false);
+	}
+
+	/**
+	 * Stage a file (or all changes to it, including deletion), for the Working Copy panel.
+	 * @param repo The path of the repository.
+	 * @param filePath The path of the file to stage.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public stageFile(repo: string, filePath: string): Promise<ErrorInfo> {
+		return this.runGitCommand(['add', '-A', '--', filePath], repo);
+	}
+
+	/**
+	 * Stage all changes in the working copy, for the Working Copy panel.
+	 * @param repo The path of the repository.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public stageAllChanges(repo: string): Promise<ErrorInfo> {
+		return this.runGitCommand(['add', '-A'], repo);
+	}
+
+	/**
+	 * Unstage a file, for the Working Copy panel.
+	 * @param repo The path of the repository.
+	 * @param filePath The (current) path of the file to unstage.
+	 * @param oldFilePath For a staged rename, the file's old path (so both index entries are reset).
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public async unstageFile(repo: string, filePath: string, oldFilePath: string | null): Promise<ErrorInfo> {
+		const paths = oldFilePath !== null && oldFilePath !== filePath ? [oldFilePath, filePath] : [filePath];
+		return (await this.hasHeadCommit(repo))
+			? this.runGitCommand(['reset', '--', ...paths], repo)
+			// Unborn HEAD: `git reset` can't resolve HEAD. Every staged file is newly added in
+			// this case, so dropping it from the index is exactly "unstaging" it.
+			: this.runGitCommand(['rm', '--cached', '-r', '--', ...paths], repo);
+	}
+
+	/**
+	 * Unstage all staged changes, for the Working Copy panel.
+	 * @param repo The path of the repository.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public async unstageAllChanges(repo: string): Promise<ErrorInfo> {
+		return (await this.hasHeadCommit(repo))
+			? this.runGitCommand(['reset'], repo)
+			: this.runGitCommand(['rm', '--cached', '-r', '--', '.'], repo);
+	}
+
+	/**
+	 * Commit the currently staged changes, for the Working Copy panel.
+	 * @param repo The path of the repository.
+	 * @param summary The commit message summary.
+	 * @param description The commit message description (may be empty).
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public commitChanges(repo: string, summary: string, description: string): Promise<ErrorInfo> {
+		const args = ['commit'];
+		if (getConfig().signCommits) {
+			args.push('-S');
+		}
+		args.push('-m', summary);
+		if (description !== '') {
+			args.push('-m', description);
+		}
+		return this.runGitCommand(args, repo);
+	}
+
+
 	/* Private Utils */
 
 	/**
@@ -1790,6 +1919,29 @@ export class DataSource extends Disposable {
 			if (fromHash === toHash) lines.shift();
 			return lines;
 		});
+	}
+
+	/**
+	 * Get the diff between HEAD and the index (i.e. staged changes) for the Working Copy panel.
+	 * @param repo The path of the repository.
+	 * @param arg Sets the data reported from the diff.
+	 * @param filter The types of file changes to retrieve.
+	 * @returns The diff output.
+	 */
+	private execDiffCached(repo: string, arg: '--numstat' | '--name-status', filter: string = 'AMDR') {
+		return this.spawnGit(['diff', '--cached', arg, '--find-renames', '--diff-filter=' + filter, '-z'], repo, (stdout) => stdout.split('\0'));
+	}
+
+	/**
+	 * Get the diff between the index and the working tree (i.e. unstaged changes) for the
+	 * Working Copy panel.
+	 * @param repo The path of the repository.
+	 * @param arg Sets the data reported from the diff.
+	 * @param filter The types of file changes to retrieve.
+	 * @returns The diff output.
+	 */
+	private execDiffPlain(repo: string, arg: '--numstat' | '--name-status', filter: string = 'AMDR') {
+		return this.spawnGit(['diff', arg, '--find-renames', '--diff-filter=' + filter, '-z'], repo, (stdout) => stdout.split('\0'));
 	}
 
 	/**

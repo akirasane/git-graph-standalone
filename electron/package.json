@@ -30,6 +30,7 @@
 		"files": [
 			"dist/**/*",
 			"index.html",
+			"panel.js",
 			"package.json"
 		],
 		"extraResources": [

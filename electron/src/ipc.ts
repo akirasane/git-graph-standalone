@@ -131,6 +131,65 @@ export class GitGraphIpcHandler {
 					errors: errorInfos
 				});
 				break;
+			case 'commitChanges': {
+				const errors: ErrorInfo[] = [await this.dataSource.commitChanges(msg.repo, msg.summary, msg.description)];
+				let pushSkippedReason: string | null = null;
+				if (errors[0] === null && msg.push) {
+					const info = await this.dataSource.getRepoInfo(msg.repo, false, false, []);
+					if (info.head === null) {
+						pushSkippedReason = 'The current branch could not be determined (e.g. a detached HEAD), so it was not pushed.';
+					} else {
+						const cfg = await this.dataSource.getConfig(msg.repo, info.remotes);
+						const branchConfig = cfg.config !== null ? cfg.config.branches[info.head] : undefined;
+						const remote = branchConfig ? (branchConfig.pushRemote || branchConfig.remote) : null;
+						if (!remote) {
+							pushSkippedReason = 'The current branch "' + info.head + '" has no upstream remote configured, so it was not pushed.';
+						} else {
+							errors.push(await this.dataSource.pushBranch(msg.repo, info.head, remote, false, GitPushBranchMode.Normal));
+						}
+					}
+				}
+				this.sendMessage({
+					command: 'commitChanges',
+					errors: errors,
+					pushSkippedReason: pushSkippedReason
+				});
+				break;
+			}
+			case 'getStagedChanges': {
+				const staged = await this.dataSource.getStagedChanges(msg.repo);
+				this.sendMessage({ command: 'getStagedChanges', files: staged.files, error: staged.error });
+				break;
+			}
+			case 'getUnstagedChanges': {
+				const unstaged = await this.dataSource.getUnstagedChanges(msg.repo);
+				this.sendMessage({ command: 'getUnstagedChanges', files: unstaged.files, error: unstaged.error });
+				break;
+			}
+			case 'stageAll':
+				this.sendMessage({
+					command: 'stageAll',
+					error: await this.dataSource.stageAllChanges(msg.repo)
+				});
+				break;
+			case 'stageFile':
+				this.sendMessage({
+					command: 'stageFile',
+					error: await this.dataSource.stageFile(msg.repo, msg.filePath)
+				});
+				break;
+			case 'unstageAll':
+				this.sendMessage({
+					command: 'unstageAll',
+					error: await this.dataSource.unstageAllChanges(msg.repo)
+				});
+				break;
+			case 'unstageFile':
+				this.sendMessage({
+					command: 'unstageFile',
+					error: await this.dataSource.unstageFile(msg.repo, msg.filePath, msg.oldFilePath)
+				});
+				break;
 			case 'checkoutCommit':
 				this.sendMessage({
 					command: 'checkoutCommit',

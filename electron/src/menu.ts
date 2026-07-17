@@ -75,7 +75,7 @@ export function buildMenu(
 	return Menu.buildFromTemplate(template);
 }
 
-async function addRepository(win: BrowserWindow, repoManager: RepoManager, getGitExecutable: () => GitExecutable | null) {
+export async function addRepository(win: BrowserWindow, repoManager: RepoManager, getGitExecutable: () => GitExecutable | null) {
 	if (getGitExecutable() === null) {
 		showErrorMessage('Unable to find a Git executable.');
 		return;

@@ -6,7 +6,7 @@ import { getConfigStore } from './configStore';
 import { ConfigChangeEvent, DataSource } from './dataSource';
 import { GitGraphIpcHandler } from './ipc';
 import { Logger } from './logger';
-import { buildMenu } from './menu';
+import { addRepository, buildMenu } from './menu';
 import { RepoManager } from './repoManager';
 import { Store } from './store';
 import { RequestMessage } from './types';
@@ -79,6 +79,10 @@ async function activate() {
 	ipcHandler = new GitGraphIpcHandler(win, dataSource, avatarManager, store, repoManager);
 
 	Menu.setApplicationMenu(buildMenu(win, () => ipcHandler, dataSource, avatarManager, store, repoManager, () => gitExecutable));
+
+	ipcMain.on('add-repository', () => {
+		addRepository(win, repoManager, () => gitExecutable);
+	});
 
 	store.expireOldCodeReviews();
 	logger.log('Started Git Graph - Ready to use!');

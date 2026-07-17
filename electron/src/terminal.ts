@@ -6,19 +6,27 @@ import * as path from 'path';
  * Prepends the Git executable's directory to PATH (matching the original's behaviour) and,
  * if `command` is provided, runs `git <command>` in the new terminal.
  */
-export function openGitTerminal(cwd: string, gitPath: string, command: string | null, _name: string): void {
-	let p = process.env['PATH'] || '';
+export function openGitTerminal(cwd: string, gitPath: string, command: string | null, name: string): void {
+	let p = path.dirname(gitPath);
 	const sep = process.platform === 'win32' ? ';' : ':';
-	if (p !== '' && !p.endsWith(sep)) p += sep;
-	p += path.dirname(gitPath);
+	const existing = process.env['PATH'] || '';
+	if (existing !== '') p += sep + existing;
 	const env = Object.assign({}, process.env, { PATH: p });
 
 	const gitCommand = command !== null ? 'git ' + command : null;
 
 	try {
 		if (process.platform === 'win32') {
-			const args = gitCommand !== null ? ['/k', gitCommand] : ['/k'];
-			spawn('cmd.exe', args, { cwd, env, detached: true, stdio: 'ignore', windowsHide: false }).unref();
+			// Plain `spawn('cmd.exe', ..., {detached:true})` is unreliable here: on Windows,
+			// `detached` only sets CREATE_NEW_PROCESS_GROUP, not CREATE_NEW_CONSOLE, and the
+			// child can still be killed alongside the launching process if it belongs to a
+			// Job Object without CREATE_BREAKAWAY_FROM_JOB (common when Electron itself was
+			// started from a wrapped/dev terminal). `cmd /c start` asks the shell to launch a
+			// genuinely independent, new-console process, which is the standard fix.
+			const title = (name || 'Git Graph').replace(/[&<>^|]/g, '');
+			const args = ['/c', 'start', '"' + title + '"', 'cmd.exe', '/k'];
+			if (gitCommand !== null) args.push(gitCommand);
+			spawn('cmd.exe', args, { cwd, env, windowsHide: false, shell: false });
 		} else if (process.platform === 'darwin') {
 			const script = gitCommand !== null
 				? 'cd ' + shellQuote(cwd) + ' && ' + gitCommand + '; exec $SHELL'

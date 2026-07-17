@@ -51,7 +51,13 @@ async function readCommitFile(dataSource: DataSource, repo: string, hash: string
 
 function buildHtml(title: string, mode: 'diff' | 'single', originalContent: string, modifiedContent: string, language: string) {
 	const nonce = getNonce();
-	const stateJson = JSON.stringify({ mode, original: originalContent, modified: modifiedContent, language });
+	// If the diffed file's own content contains the literal text "</script>" (any real HTML
+	// file has one), the browser's HTML parser closes this <script> tag right there - before
+	// the JS parser ever sees it - dumping the rest of the JSON/file content as raw markup
+	// instead of running the diff viewer. Escaping '<' as a unicode escape keeps the JSON
+	// valid (JS string literals decode < back to '<') while being invisible to the HTML
+	// tokenizer.
+	const stateJson = JSON.stringify({ mode, original: originalContent, modified: modifiedContent, language }).replace(/</g, '\\u003c');
 	return `<!doctype html>
 <html>
 <head>

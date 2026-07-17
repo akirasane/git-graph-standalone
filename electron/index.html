@@ -6,13 +6,91 @@
 	<link rel="stylesheet" type="text/css" href="../media/out.min.css">
 	<title>Git Graph (Standalone - Phase 0)</title>
 	<style>
-		body{--git-graph-color0:#0085d9; --git-graph-color1:#d9008f; --git-graph-color2:#00d90a; --git-graph-color3:#d98500; --git-graph-color4:#a300d9; --git-graph-color5:#ff0000; --git-graph-color6:#00d9cc; --git-graph-color7:#e138e8; --git-graph-color8:#85d900; --git-graph-color9:#dc5b23; --git-graph-color10:#6f24d6; --git-graph-color11:#ffcc00; }
+		/*
+		 * Theme: "Terminal Velocity" (stitch_git_graph_standalone_theming_fix/DESIGN.md).
+		 * out.min.css is written against VSCode theme variables (--vscode-*), which only exist
+		 * inside a real VSCode webview - standalone Electron never injects them, so anything
+		 * reading them (menu/dropdown/dialog backgrounds, borders) fell back to transparent, and
+		 * general body text had no foreground rule at all (VSCode's webview host normally supplies
+		 * that, not out.min.css) - the fix below both supplies the missing base text color and
+		 * maps every consumed --vscode-* var to this design system's tokens.
+		 */
+		body{
+			--git-graph-color0:#0085d9; --git-graph-color1:#d9008f; --git-graph-color2:#00d90a; --git-graph-color3:#d98500; --git-graph-color4:#a300d9; --git-graph-color5:#ff0000; --git-graph-color6:#00d9cc; --git-graph-color7:#e138e8; --git-graph-color8:#85d900; --git-graph-color9:#dc5b23; --git-graph-color10:#6f24d6; --git-graph-color11:#ffcc00;
+
+			--vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", sans-serif;
+
+			/* Level 0/1/2 tonal layering */
+			--vscode-editor-background: #1e1e1e;
+			--vscode-editorWidget-background: #252526;
+			--vscode-menu-background: #3c3c3c;
+
+			/* Text */
+			--vscode-editor-foreground: #d4d4d4;
+			--vscode-editorSuggestWidget-foreground: #d4d4d4;
+			--vscode-menu-foreground: #cccccc;
+			--vscode-input-foreground: #cccccc;
+			--vscode-input-placeholderForeground: #a6a6a6;
+
+			/* Accents: #007fd4 = focus/primary actions, #3794ff = interactive text/links */
+			--vscode-focusBorder: #007fd4;
+			--vscode-textLink-foreground: #3794ff;
+			--vscode-textLink-activeForeground: #3794ff;
+			--vscode-inputOption-activeBorder: #007acc;
+			--vscode-inputOption-activeBackground: rgba(0,127,212,0.4);
+
+			/* Selection: #094771 for passive row/text selection, #007fd4 for active menu-item hover */
+			--vscode-selection-background: #094771;
+			--vscode-menu-selectionBackground: #007fd4;
+			--vscode-menu-selectionForeground: #ffffff;
+			--vscode-menu-selectionBorder: transparent;
+
+			/* Borders / separators - 1px solid lines define structure, no blur/shadow per design */
+			--vscode-menu-border: #454545;
+			--vscode-menu-separatorBackground: #454545;
+			--vscode-widget-shadow: rgba(0,0,0,0.5);
+			--vscode-scrollbar-shadow: #000000;
+
+			--vscode-input-background: #3c3c3c;
+			--vscode-inputValidation-errorBorder: #be1100;
+			--vscode-inputValidation-errorBackground: #5a1d1d;
+			--vscode-editor-findMatchHighlightBorder: #ea5c00aa;
+
+			--vscode-gitDecoration-modifiedResourceForeground: #e2c08d;
+			--vscode-gitDecoration-addedResourceForeground: #81b88b;
+			--vscode-gitDecoration-deletedResourceForeground: #c74e39;
+		}
+
+		/* out.min.css never sets a base foreground color (assumes the VSCode webview host
+		   supplies one) - this is the actual fix for the dark-bg/dark-text bug. */
+		body, #view{
+			color: var(--vscode-editor-foreground);
+			font-family: var(--vscode-font-family);
+			background-color: var(--vscode-editor-background);
+		}
+
 		[data-color="0"]{--git-graph-color:var(--git-graph-color0);} [data-color="1"]{--git-graph-color:var(--git-graph-color1);} [data-color="2"]{--git-graph-color:var(--git-graph-color2);} [data-color="3"]{--git-graph-color:var(--git-graph-color3);} [data-color="4"]{--git-graph-color:var(--git-graph-color4);} [data-color="5"]{--git-graph-color:var(--git-graph-color5);} [data-color="6"]{--git-graph-color:var(--git-graph-color6);} [data-color="7"]{--git-graph-color:var(--git-graph-color7);} [data-color="8"]{--git-graph-color:var(--git-graph-color8);} [data-color="9"]{--git-graph-color:var(--git-graph-color9);} [data-color="10"]{--git-graph-color:var(--git-graph-color10);} [data-color="11"]{--git-graph-color:var(--git-graph-color11);}
+
+		::-webkit-scrollbar{ width:10px; height:10px; }
+		::-webkit-scrollbar-track{ background:#1e1e1e; }
+		::-webkit-scrollbar-thumb{ background:#333333; }
+		::-webkit-scrollbar-thumb:hover{ background:#444444; }
+
+		#addRepoBtn{
+			position:absolute; left:8px; top:50%; transform:translateY(-50%);
+			height:22px; padding:0 10px; line-height:22px; font-size:12px;
+			background:var(--vscode-menu-background); color:var(--vscode-menu-foreground);
+			border:1px solid transparent; border-radius:0; cursor:pointer;
+		}
+		#addRepoBtn:hover{ background:#4a4a4a; }
+		#addRepoBtn:active{ border-color:var(--vscode-focusBorder); }
+		#controls{ padding-left:110px; }
 	</style>
 </head>
 <body>
 	<div id="view" tabindex="-1">
 		<div id="controls">
+			<button id="addRepoBtn" type="button" title="Add a Repository (select a folder containing a Git repo)">+ Add Repository</button>
 			<span id="repoControl"><span class="unselectable">Repo: </span><div id="repoDropdown" class="dropdown"></div></span>
 			<span id="branchControl"><span class="unselectable">Branches: </span><div id="branchDropdown" class="dropdown"></div></span>
 			<label id="showRemoteBranchesControl"><input type="checkbox" id="showRemoteBranchesCheckbox" tabindex="-1"><span class="customCheckbox"></span>Show Remote Branches</label>
@@ -122,5 +200,10 @@
 		var workspaceState = { findIsCaseSensitive: false, findIsRegex: false, findOpenCommitDetailsView: false };
 	</script>
 	<script src="../media/out.min.js"></script>
+	<script>
+		document.getElementById('addRepoBtn').addEventListener('click', function () {
+			window.electronAPI.addRepository();
+		});
+	</script>
 </body>
 </html>

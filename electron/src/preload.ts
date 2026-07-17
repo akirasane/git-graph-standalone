@@ -25,3 +25,8 @@ contextBridge.exposeInMainWorld('acquireVsCodeApi', () => {
 ipcRenderer.on('git-graph-message', (_event, message) => {
 	window.postMessage(message, '*');
 });
+
+/** Exposes the "Add Repository" folder-picker as an in-page button, separate from the app menu. */
+contextBridge.exposeInMainWorld('electronAPI', {
+	addRepository: () => ipcRenderer.send('add-repository')
+});

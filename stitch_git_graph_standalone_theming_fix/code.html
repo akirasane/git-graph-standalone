@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>GitFlow Visualizer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=-apple-system,+BlinkMacSystemFont,+'Segoe+WPC',+'Segoe+UI',+sans-serif:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        @font-face {
+            font-family: 'jetbrainsMono';
+            src: url('https://fonts.gstatic.com/s/jetbrainsmono/v18/t6fq207W6_At968U_wK35X9u.woff2') format('woff2');
+        }
+
+        body {
+            background-color: #131313;
+            color: #d4d4d4;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', sans-serif;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .material-symbols-outlined {
+            font-size: 18px;
+            user-select: none;
+        }
+
+        /* Custom Scrollbar for IDE feel */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333333;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444444;
+        }
+
+        .git-graph-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .commit-row:hover {
+            background-color: #2a2d2e;
+        }
+
+        .context-menu {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            min-width: 160px;
+            background-color: #3c3c3c;
+            color: #cccccc;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            border: 1px solid #454545;
+        }
+
+        .context-menu-item {
+            padding: 4px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .context-menu-item:hover {
+            background-color: #007fd4;
+            color: #ffffff;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#353535",
+                        "primary-fixed-dim": "#9fcaff",
+                        "on-secondary-container": "#002a54",
+                        "inverse-on-surface": "#303030",
+                        "on-tertiary-container": "#451f00",
+                        "surface-bright": "#393939",
+                        "outline": "#8a919d",
+                        "surface-tint": "#9fcaff",
+                        "on-tertiary": "#4f2500",
+                        "surface-container-high": "#2a2a2a",
+                        "secondary-fixed": "#d5e3ff",
+                        "secondary-fixed-dim": "#a6c8ff",
+                        "inverse-surface": "#e5e2e1",
+                        "secondary": "#a6c8ff",
+                        "secondary-container": "#3391fc",
+                        "on-surface-variant": "#c0c7d3",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-container-low": "#1b1b1c",
+                        "on-primary-container": "#002b4d",
+                        "surface-container": "#202020",
+                        "on-primary": "#003258",
+                        "on-secondary-fixed": "#001c3b",
+                        "on-surface": "#e5e2e1",
+                        "on-secondary": "#003060",
+                        "on-tertiary-fixed-variant": "#713700",
+                        "tertiary-container": "#db761e",
+                        "error": "#ffb4ab",
+                        "primary-container": "#3495eb",
+                        "on-error-container": "#ffdad6",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#001d36",
+                        "background": "#131313",
+                        "outline-variant": "#404752",
+                        "surface": "#131313",
+                        "surface-dim": "#131313",
+                        "on-background": "#e5e2e1",
+                        "inverse-primary": "#0061a4",
+                        "on-tertiary-fixed": "#301400",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#353535",
+                        "tertiary": "#ffb784",
+                        "tertiary-fixed": "#ffdcc6",
+                        "tertiary-fixed-dim": "#ffb784",
+                        "primary": "#9fcaff",
+                        "on-primary-fixed-variant": "#00497d",
+                        "on-secondary-fixed-variant": "#004787",
+                        "primary-fixed": "#d1e4ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-page": "16px",
+                        "gutter": "12px",
+                        "panel-padding": "8px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["-apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', sans-serif"],
+                        "label-caps": ["-apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', sans-serif"],
+                        "headline-md": ["-apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', sans-serif"],
+                        "body-md": ["-apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', sans-serif"],
+                        "code-md": ["jetbrainsMono"],
+                        "headline-lg": ["-apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', sans-serif"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["11px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-md": ["13px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "code-md": ["13px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["28px", {"lineHeight": "36px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="flex flex-col h-screen select-none">
+<!-- Top Navigation Anchor -->
+<header class="bg-surface-container-low dark:bg-surface-container-low border-b border-outline-variant dark:border-outline-variant w-full h-12 flex items-center justify-between px-gutter shrink-0">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-bold text-on-surface dark:text-on-surface">GitFlow Visualizer</span>
+<div class="hidden md:flex gap-4 ml-6 font-body-md text-body-md">
+<a class="text-primary border-b-2 border-primary pb-1 transition-colors" href="#">Branches</a>
+<a class="text-on-surface-variant hover:bg-surface-variant transition-colors px-2 py-1" href="#">Commits</a>
+<a class="text-on-surface-variant hover:bg-surface-variant transition-colors px-2 py-1" href="#">Stash</a>
+<a class="text-on-surface-variant hover:bg-surface-variant transition-colors px-2 py-1" href="#">Remotes</a>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#cccccc] px-3 py-1 font-body-md text-body-md flex items-center gap-2 border border-transparent active:border-[#007fd4] transition-all">
+<span class="material-symbols-outlined">terminal</span>
+                Terminal
+            </button>
+<div class="flex gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined cursor-pointer hover:bg-surface-variant p-1 rounded transition-colors">refresh</span>
+<span class="material-symbols-outlined cursor-pointer hover:bg-surface-variant p-1 rounded transition-colors">settings</span>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Side Navigation Anchor -->
+<nav class="h-full w-12 flex flex-col justify-between py-4 bg-surface-container-low dark:bg-surface-container-low border-r border-outline-variant dark:border-outline-variant shrink-0 z-20">
+<div class="flex flex-col items-center gap-4">
+<div class="w-full flex justify-center text-primary border-l-2 border-primary bg-surface-variant py-2 transition-all duration-150 cursor-pointer" title="Explorer">
+<span class="material-symbols-outlined">folder_open</span>
+</div>
+<div class="w-full flex justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest py-2 transition-all duration-150 cursor-pointer" title="Source Control">
+<span class="material-symbols-outlined">account_tree</span>
+</div>
+<div class="w-full flex justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest py-2 transition-all duration-150 cursor-pointer" title="Search">
+<span class="material-symbols-outlined">search</span>
+</div>
+<div class="w-full flex justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest py-2 transition-all duration-150 cursor-pointer" title="Extensions">
+<span class="material-symbols-outlined">extension</span>
+</div>
+<div class="w-full flex justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest py-2 transition-all duration-150 cursor-pointer" title="Timeline">
+<span class="material-symbols-outlined">history</span>
+</div>
+</div>
+<div class="flex flex-col items-center gap-4">
+<div class="w-full flex justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest py-2 transition-all duration-150 cursor-pointer" title="Accounts">
+<span class="material-symbols-outlined">account_circle</span>
+</div>
+<div class="w-full flex justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest py-2 transition-all duration-150 cursor-pointer" title="Settings">
+<span class="material-symbols-outlined">settings</span>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col bg-[#1e1e1e] relative min-w-0" id="view">
+<!-- Control Bar with Absolute Positioned Add Repo Button -->
+<div class="h-9 border-b border-[#333333] flex items-center px-2 bg-[#252526] sticky top-0 z-10">
+<button class="bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#cccccc] px-3 py-1 font-body-sm text-body-sm flex items-center gap-1 border border-transparent" id="add-repo-btn">
+<span class="material-symbols-outlined" style="font-size: 14px;">add</span>
+                    Add Repo
+                </button>
+<div class="ml-4 flex items-center gap-2">
+<span class="font-label-caps text-label-caps text-[#888888]">BRANCH:</span>
+<div class="bg-[#3c3c3c] text-[#d4d4d4] text-[11px] px-2 py-0.5 rounded-sm flex items-center gap-1 cursor-pointer">
+                        main <span class="material-symbols-outlined" style="font-size: 12px;">expand_more</span>
+</div>
+</div>
+<div class="flex-1 flex justify-center">
+<div class="relative w-64">
+<input class="w-full bg-[#3c3c3c] border-none text-[12px] h-6 px-7 focus:ring-1 focus:ring-[#007fd4] text-[#d4d4d4]" placeholder="Search commits..." type="text"/>
+<span class="material-symbols-outlined absolute left-1.5 top-1 text-[#888888]" style="font-size: 14px;">search</span>
+</div>
+</div>
+</div>
+<!-- Git Graph Table Container -->
+<div class="flex-1 overflow-auto relative" id="graph-container">
+<canvas class="git-graph-canvas" id="graphCanvas"></canvas>
+<table class="w-full border-collapse text-[13px] text-[#d4d4d4] font-body-md table-fixed">
+<thead class="sticky top-0 bg-[#252526] shadow-sm z-10 text-[#888888]">
+<tr class="text-left font-normal uppercase text-[11px] tracking-wider border-b border-[#333333]">
+<th class="w-[300px] p-2 font-normal">Graph & Message</th>
+<th class="w-32 p-2 font-normal">Commit</th>
+<th class="w-40 p-2 font-normal">Author</th>
+<th class="w-32 p-2 font-normal">Date</th>
+</tr>
+</thead>
+<tbody id="commit-list">
+<!-- Commit 1 -->
+<tr class="commit-row border-b border-[#252526] group cursor-context-menu" data-id="c1">
+<td class="p-2 relative">
+<div class="flex items-center gap-2 pl-24">
+<span class="bg-[#2a2d2e] border border-[#404752] text-primary text-[10px] px-1 rounded">main</span>
+<span class="bg-[#2a2d2e] border border-[#404752] text-tertiary text-[10px] px-1 rounded">origin/main</span>
+<span class="truncate">feat: implement bento grid layout for dashboard</span>
+</div>
+</td>
+<td class="p-2 font-code-md text-[#888888]">a7f2d31</td>
+<td class="p-2 flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-primary-container flex items-center justify-center text-[10px] text-white overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="High quality professional headshot of a developer in a dark hoodie, minimalist studio lighting, tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAppBNdoZlKF5W7SJiGJ4tmBc6v2xkxHtt0N9jO9v-HwYcxaU0_3UKstZ-9wDG3ACXGcxPEse7miSv5-_zN404qUPb-Sr6Sy_FipI0wbmQmZPHcHPdycLNc5v1ESFl7rDVPPzLNVCBx-s31X0UN3ClEFPka9tA7E2LBeTDd3ve8vuRHOEb-R5yXP6zUhLVIVLJ1ApoOAchnNQHozUt_OncRrXnKDE3G4hYjQY5ifq03Il8LHKJVgvLANCu87AXq__SYx9c5MCKXxsU"/>
+</div>
+<span>Alex Rivers</span>
+</td>
+<td class="p-2 text-[#888888]">2023-10-24</td>
+</tr>
+<!-- Commit 2 -->
+<tr class="commit-row border-b border-[#252526] group cursor-context-menu" data-id="c2">
+<td class="p-2 relative">
+<div class="flex items-center gap-2 pl-24">
+<span class="bg-[#2a2d2e] border border-[#404752] text-secondary text-[10px] px-1 rounded">dev-ui</span>
+<span class="truncate">fix: update shader precision for webgl elements</span>
+</div>
+</td>
+<td class="p-2 font-code-md text-[#888888]">b2c4e90</td>
+<td class="p-2 flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-secondary-container flex items-center justify-center text-[10px] text-white overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A candid profile photo of a software engineer with glasses, soft rim lighting, dark modern office background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqrPqTDfQ-oonNWDvw6Kkb1uaAG6MfAQMQnzxS_Rpz2CJChJW0Kr1w9vQVXiOlK6snbzrqnIjf-Q7DFdwj8ugPLe97vEOJdneTw6AzFyQ95iVwwpaKii49pNlqIUgQVQE964uc7lZGjQ_FkmuzWneytEfhDSb4oH8Fsfyk6mD-LHnpgjjwWOeQYVmrBodQ77HNSQTrM0Cy1vyX7DHxlQgJH5hH-o4iS2314mztqNMhvhgEk5qaRx-6HYozS5qXmpz-lJUt2bFSDWE"/>
+</div>
+<span>Sarah Chen</span>
+</td>
+<td class="p-2 text-[#888888]">2023-10-23</td>
+</tr>
+<!-- Commit 3 -->
+<tr class="commit-row border-b border-[#252526] group cursor-context-menu" data-id="c3">
+<td class="p-2 relative">
+<div class="flex items-center gap-2 pl-24">
+<span class="truncate">docs: update readme with brand anchor instructions</span>
+</div>
+</td>
+<td class="p-2 font-code-md text-[#888888]">f5a1102</td>
+<td class="p-2 flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-tertiary-container flex items-center justify-center text-[10px] text-white overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a senior tech lead, warm lighting, blurred background of a modern server room, high-end professional look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBW1GlIgCgxGYfbvJIvL5RffQs3G0dNs4x6Yo68rWEsjAPBstoGM1X957a3FpjTrMYfmLVd2AeIQoO2dodV8AMj5hJCwtQyUvFwtWv0qc6SRTEAGEAyPUskjEavtGU3tHbe4FaNRAv4HdxwzpthwEVBLr8Ru8_vFd5dnhcFEO1FEQkOcqvKAJlJmii5_t-NYTVYtLqIyq4sqFIfyJ3xbkp3fRJ02jdAO6hcDd3ldxwHc2-pMejt4VVeNaG_U-n13qjurJDjC4222UU"/>
+</div>
+<span>Marc Voltz</span>
+</td>
+<td class="p-2 text-[#888888]">2023-10-22</td>
+</tr>
+<!-- Commit 4 -->
+<tr class="commit-row border-b border-[#252526] group cursor-context-menu" data-id="c4">
+<td class="p-2 relative">
+<div class="flex items-center gap-2 pl-24">
+<span class="truncate">merge: pull request #12 from bugfix/auth-leak</span>
+</div>
+</td>
+<td class="p-2 font-code-md text-[#888888]">d99211c</td>
+<td class="p-2 flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-primary-container flex items-center justify-center text-[10px] text-white overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Cinematic headshot of a programmer focusing intently, blue-tinged lighting from computer monitors, tech-focused digital art style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKrD28xAElkneeNKMV1gLYjEn2d0ydEy1lSKd63rxzYBV_sSiX8f0MmjOL5bpmY3eN2MthGjBZiLRmb-wOYcv49RoZdOBEuXnIHSSEcE2Djn3qHF8yblRKdOstRjvRMq0BESBbGcRsW5wiNujQZUnRIfDN429iE2wIMV_YyyOOrIqEkCzWhCwO7dL8BQf1B44neVTaHCdZIoXvDMWArjT6VM8BlO1aqvyALClV6AtJz5KV0Y4HsSLzGOtyBMQsDRDjj4xxHRBmCh0"/>
+</div>
+<span>Alex Rivers</span>
+</td>
+<td class="p-2 text-[#888888]">2023-10-21</td>
+</tr>
+<!-- Commit 5 -->
+<tr class="commit-row border-b border-[#252526] group cursor-context-menu" data-id="c5">
+<td class="p-2 relative">
+<div class="flex items-center gap-2 pl-24">
+<span class="bg-[#2a2d2e] border border-[#404752] text-[#ffb4ab] text-[10px] px-1 rounded">v1.2.0</span>
+<span class="truncate">release: stable build v1.2.0 final</span>
+</div>
+</td>
+<td class="p-2 font-code-md text-[#888888]">ee120a1</td>
+<td class="p-2 flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-surface-variant flex items-center justify-center text-[10px] text-white overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Minimalist abstract avatar of a coder, stylized vector art in a dark mode color palette, sharp lines and geometric forms." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALhzJgOJ4JfNY4a3UnxTtHskeW5mZ2-7TJAzAhJYQ2RXQpo6ZmQolDt8krKlQXtlyRUJmFSbW4ir7vfbvj0ye3aVOEoEB-SOgyxUyszUExvGcx4ZQQpMvD69qC7fuVP3X0pbg1g9qJ193lJ32W3B1U23dy1RW4WQLq6kGon7aZrcpkJw8W_SF4jwWmJOBQkXqP_-tjP1GFTp9c6OyJFfxakoHz-7pSF9vmpZXg0vbCLlEwyxjcezeN2PIRWS8eNRPbZLMY-UHAAKw"/>
+</div>
+<span>CI/CD Bot</span>
+</td>
+<td class="p-2 text-[#888888]">2023-10-20</td>
+</tr>
+<!-- Fill the rest for scroll demo -->
+<script>
+                            const list = document.getElementById('commit-list');
+                            for(let i=6; i<30; i++) {
+                                const row = `
+                                    <tr class="commit-row border-b border-[#252526] group cursor-context-menu" data-id="c${i}">
+                                        <td class="p-2 relative">
+                                            <div class="flex items-center gap-2 pl-24">
+                                                <span class="truncate">chore: minor performance optimization ${i}</span>
+                                            </div>
+                                        </td>
+                                        <td class="p-2 font-code-md text-[#888888]">0a${i}f${i}d</td>
+                                        <td class="p-2 flex items-center gap-2">
+                                            <div class="w-5 h-5 rounded-full bg-surface-container-highest flex items-center justify-center text-[10px] text-white">
+                                                ${String.fromCharCode(65 + (i % 26))}
+                                            </div>
+                                            <span>User ${i}</span>
+                                        </td>
+                                        <td class="p-2 text-[#888888]">2023-10-1${9-i > 0 ? 9-i : 0}</td>
+                                    </tr>
+                                `;
+                                list.insertAdjacentHTML('beforeend', row);
+                            }
+                        </script>
+</tbody>
+</table>
+</div>
+</main>
+<!-- Right Panel (File Diff Placeholder) -->
+<aside class="w-80 bg-surface-container-low border-l border-outline-variant hidden xl:flex flex-col">
+<div class="h-9 border-b border-[#333333] flex items-center px-4 bg-[#252526] justify-between">
+<span class="font-label-caps text-label-caps text-[#888888]">COMMIT DETAILS</span>
+<span class="material-symbols-outlined text-[16px] cursor-pointer hover:bg-surface-variant">close</span>
+</div>
+<div class="p-4 flex-1 overflow-auto">
+<div class="mb-4">
+<h3 class="font-bold text-on-surface mb-1">feat: implement bento grid layout</h3>
+<p class="text-body-sm text-[#888888]">a7f2d31 · Today, 14:32</p>
+</div>
+<div class="space-y-2">
+<div class="bg-[#2a2d2e] p-2 rounded flex items-center justify-between group cursor-pointer hover:bg-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-size: 14px;">description</span>
+<span class="text-body-md">index.html</span>
+</div>
+<span class="text-[10px] text-secondary-container">+142 -12</span>
+</div>
+<div class="bg-[#2a2d2e] p-2 rounded flex items-center justify-between group cursor-pointer hover:bg-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-size: 14px;">description</span>
+<span class="text-body-md">styles.css</span>
+</div>
+<span class="text-[10px] text-secondary-container">+85 -2</span>
+</div>
+<div class="bg-[#2a2d2e] p-2 rounded flex items-center justify-between group cursor-pointer hover:bg-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-size: 14px;">javascript</span>
+<span class="text-body-md">main.js</span>
+</div>
+<span class="text-[10px] text-secondary-container">+12 -0</span>
+</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- Status Bar -->
+<footer class="h-6 bg-[#007fd4] text-white flex items-center px-2 justify-between text-[11px] font-body-sm shrink-0">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 hover:bg-white/10 px-1 cursor-pointer">
+<span class="material-symbols-outlined" style="font-size: 14px;">account_tree</span>
+<span>main*</span>
+</div>
+<div class="flex items-center gap-1 hover:bg-white/10 px-1 cursor-pointer">
+<span class="material-symbols-outlined" style="font-size: 14px;">sync</span>
+</div>
+<div class="flex items-center gap-1 hover:bg-white/10 px-1 cursor-pointer">
+<span class="material-symbols-outlined" style="font-size: 14px;">error_outline</span>
+<span>0</span>
+<span class="material-symbols-outlined" style="font-size: 14px;">warning</span>
+<span>2</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="hover:bg-white/10 px-1 cursor-pointer">Spaces: 4</span>
+<span class="hover:bg-white/10 px-1 cursor-pointer">UTF-8</span>
+<span class="hover:bg-white/10 px-1 cursor-pointer">HTML</span>
+<div class="flex items-center gap-1 hover:bg-white/10 px-1 cursor-pointer">
+<span class="material-symbols-outlined" style="font-size: 14px;">notifications</span>
+</div>
+</div>
+</footer>
+<!-- Context Menu -->
+<div class="context-menu" id="contextMenu">
+<div class="context-menu-item">Checkout... <span class="text-[10px] opacity-50">C</span></div>
+<div class="context-menu-item">Merge into current branch...</div>
+<div class="context-menu-item">Rebase current branch onto...</div>
+<div class="border-t border-[#454545] my-1"></div>
+<div class="context-menu-item">Reset current branch to this commit...</div>
+<div class="context-menu-item">Revert Commit</div>
+<div class="context-menu-item">Cherry-pick Commit</div>
+<div class="border-t border-[#454545] my-1"></div>
+<div class="context-menu-item">Copy Commit Hash <span class="text-[10px] opacity-50">Ctrl+C</span></div>
+</div>
+<script>
+        // Custom Git Graph Drawing
+        const canvas = document.getElementById('graphCanvas');
+        const container = document.getElementById('graph-container');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = 120; // Width of graph column
+            canvas.height = container.scrollHeight;
+        }
+
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const rowHeight = 36; // Approx height of commit-row including padding/border
+            const offset = 48; // Header offset
+            
+            ctx.lineWidth = 2;
+            
+            // Draw dummy lines
+            // Main Line (Blue)
+            ctx.strokeStyle = '#3495eb';
+            ctx.beginPath();
+            ctx.moveTo(30, 0);
+            ctx.lineTo(30, canvas.height);
+            ctx.stroke();
+
+            // Branch Line (Orange)
+            ctx.strokeStyle = '#db761e';
+            ctx.beginPath();
+            ctx.moveTo(30, 84);
+            ctx.bezierCurveTo(30, 100, 60, 110, 60, 130);
+            ctx.lineTo(60, 240);
+            ctx.bezierCurveTo(60, 260, 30, 270, 30, 290);
+            ctx.stroke();
+
+            // Dots
+            const drawDot = (x, y, color) => {
+                ctx.fillStyle = '#1e1e1e';
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            };
+
+            drawDot(30, 56, '#3495eb'); // Commit 1
+            drawDot(60, 92, '#db761e'); // Commit 2
+            drawDot(60, 128, '#db761e'); // Commit 3
+            drawDot(30, 164, '#3495eb'); // Commit 4
+            drawDot(30, 200, '#3495eb'); // Commit 5
+        }
+
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            drawGraph();
+        });
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            drawGraph();
+        });
+
+        // Context Menu Logic
+        const menu = document.getElementById('contextMenu');
+        const rows = document.querySelectorAll('.commit-row');
+
+        document.addEventListener('contextmenu', (e) => {
+            const row = e.target.closest('.commit-row');
+            if (row) {
+                e.preventDefault();
+                menu.style.display = 'block';
+                menu.style.left = e.pageX + 'px';
+                menu.style.top = e.pageY + 'px';
+                
+                // Highlight row
+                rows.forEach(r => r.style.backgroundColor = '');
+                row.style.backgroundColor = '#094771';
+            } else {
+                menu.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', () => {
+            menu.style.display = 'none';
+            rows.forEach(r => r.style.backgroundColor = '');
+        });
+
+        // Micro-interaction for Add Repo Button
+        const addBtn = document.getElementById('add-repo-btn');
+        addBtn.addEventListener('click', () => {
+            addBtn.innerHTML = 'Scanning...';
+            setTimeout(() => {
+                addBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 14px;">add</span> Add Repo';
+            }, 1000);
+        });
+
+        // Scroll synchronization
+        container.addEventListener('scroll', () => {
+            // Keep the canvas aligned if needed, though absolute positioning inside scrolling relative container handles this.
+        });
+    </script>
+</body></html>

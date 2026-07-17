@@ -40,8 +40,21 @@ jobs:
         shell: bash
         run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
 
-      - name: Build and publish
+      # Build only - no --publish here. electron-builder's own GitHub publisher raced itself
+      # creating the release when uploading multiple artifacts (installer + blockmap) at once,
+      # silently dropping the large .exe upload while the release still reported success. The
+      # build.publish config in package.json is still needed independently of this - it's what
+      # bakes app-update.yml into the packaged app, which is how electron-updater knows which
+      # GitHub repo to check for updates against at runtime.
+      - name: Build
         working-directory: electron
-        run: npm run dist -- --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            electron/release/*.exe
+            electron/release/*.exe.blockmap
+            electron/release/latest.yml

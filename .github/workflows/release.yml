@@ -40,15 +40,17 @@ jobs:
         shell: bash
         run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version
 
-      # Build only - no --publish here. electron-builder's own GitHub publisher raced itself
-      # creating the release when uploading multiple artifacts (installer + blockmap) at once,
-      # silently dropping the large .exe upload while the release still reported success. The
-      # build.publish config in package.json is still needed independently of this - it's what
-      # bakes app-update.yml into the packaged app, which is how electron-updater knows which
-      # GitHub repo to check for updates against at runtime.
+      # Build only - explicitly `--publish never`. electron-builder's own GitHub publisher raced
+      # itself creating the release when uploading multiple artifacts (installer + blockmap) at
+      # once, silently dropping the large .exe upload while the release still reported success.
+      # `never` is required, not just omitting --publish: electron-builder auto-detects "CI + git
+      # tag checkout" and implicitly tries to publish anyway, which then fails outright with no
+      # GH_TOKEN in this step's env. The build.publish config in package.json is still needed
+      # independently of this - it's what bakes app-update.yml into the packaged app, which is
+      # how electron-updater knows which GitHub repo to check for updates against at runtime.
       - name: Build
         working-directory: electron
-        run: npm run dist
+        run: npm run dist -- --publish never
 
       - name: Publish release
         uses: softprops/action-gh-release@v2

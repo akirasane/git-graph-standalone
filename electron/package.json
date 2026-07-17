@@ -1,0 +1,53 @@
+{
+	"name": "git-graph-standalone",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Standalone Electron shell for Git Graph",
+	"author": "Michael Hutchison",
+	"main": "dist/main.js",
+	"scripts": {
+		"compile": "tsc -p . && node -e \"require('fs').cpSync('src/askpass/askpass.sh','dist/askpass/askpass.sh');require('fs').cpSync('src/askpass/askpass-empty.sh','dist/askpass/askpass-empty.sh')\"",
+		"start": "npm run compile && electron .",
+		"dist": "npm run compile && electron-builder"
+	},
+	"dependencies": {
+		"chokidar": "3.6.0",
+		"monaco-editor": "0.49.0"
+	},
+	"devDependencies": {
+		"@types/node": "20.11.30",
+		"electron": "31.0.0",
+		"electron-builder": "24.13.3",
+		"typescript": "5.4.5"
+	},
+	"build": {
+		"appId": "com.mhutchie.git-graph-standalone",
+		"productName": "Git Graph",
+		"asar": false,
+		"directories": {
+			"output": "release"
+		},
+		"files": [
+			"dist/**/*",
+			"index.html",
+			"package.json"
+		],
+		"extraResources": [
+			{ "from": "../media", "to": "media" }
+		],
+		"win": {
+			"target": "nsis",
+			"icon": "icon-256.png",
+			"signAndEditExecutable": false,
+			"verifyUpdateCodeSignature": false
+		},
+		"mac": {
+			"target": "dmg",
+			"icon": "icon-256.png"
+		},
+		"linux": {
+			"target": "AppImage",
+			"icon": "icon-256.png"
+		}
+	}
+}

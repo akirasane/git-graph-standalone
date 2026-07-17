@@ -2,6 +2,7 @@
 	"compilerOptions": {
 		"lib": [
 			"es6",
+			"es2016.array.include",
 			"dom"
 		],
 		"module": "none",
@@ -13,6 +14,9 @@
 		"outDir": "../media",
 		"removeComments": true,
 		"strict": true,
-		"target": "es5"
+		"target": "es5",
+		"types": [
+			"node"
+		]
 	}
 }

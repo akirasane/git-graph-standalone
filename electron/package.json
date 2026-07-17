@@ -3,7 +3,10 @@
 	"version": "0.0.1",
 	"private": true,
 	"description": "Standalone Electron shell for Git Graph",
-	"author": "Michael Hutchison",
+	"author": {
+		"name": "akirasane",
+		"url": "https://github.com/akirasane"
+	},
 	"main": "dist/main.js",
 	"scripts": {
 		"compile": "tsc -p . && node -e \"require('fs').cpSync('src/askpass/askpass.sh','dist/askpass/askpass.sh');require('fs').cpSync('src/askpass/askpass-empty.sh','dist/askpass/askpass-empty.sh')\"",
@@ -48,7 +51,7 @@
 		"win": {
 			"target": "nsis",
 			"icon": "icon-256.png",
-			"signAndEditExecutable": false,
+			"signExecutable": false,
 			"verifyUpdateCodeSignature": false
 		},
 		"mac": {

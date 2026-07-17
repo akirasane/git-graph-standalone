@@ -419,7 +419,11 @@ export class RepoManager extends Disposable {
 	}
 
 	private startWatchingFolder(folderPath: string) {
-		const watcher = chokidar.watch(folderPath, { ignoreInitial: true, disableGlobbing: true });
+		// Excludes node_modules and .git internals from the recursive watch setup - onWatcherCreate/
+		// onWatcherChange/onWatcherDelete already discard everything under .git anyway (they only
+		// care about the bare .git directory appearing/disappearing), so this is a pure startup-time
+		// perf fix, not a behaviour change.
+		const watcher = chokidar.watch(folderPath, { ignoreInitial: true, disableGlobbing: true, ignored: ['**/node_modules/**', '**/.git/**'] });
 		watcher.on('add', (p) => this.onWatcherCreate(p));
 		watcher.on('addDir', (p) => this.onWatcherCreate(p));
 		watcher.on('change', (p) => this.onWatcherChange(p));

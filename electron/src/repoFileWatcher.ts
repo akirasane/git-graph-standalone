@@ -29,7 +29,15 @@ export class RepoFileWatcher {
 		}
 
 		this.repo = repo;
-		this.watcher = chokidar.watch(repo, { ignoreInitial: true, disableGlobbing: true });
+		this.watcher = chokidar.watch(repo, {
+			ignoreInitial: true, disableGlobbing: true,
+			// Without this, chokidar recursively watches every file in the repo up front,
+			// including node_modules and .git's internal object/log storage - on a repo with
+			// large dependency trees this made the initial watch setup (and everything queued
+			// behind it) stall for several seconds on startup. None of these paths can ever
+			// match FILE_CHANGE_REGEX above anyway, so excluding them changes no behaviour.
+			ignored: ['**/node_modules/**', '**/.git/objects/**', '**/.git/logs/**', '**/.git/lfs/**']
+		});
 		this.watcher.on('add', (path) => this.refresh(path));
 		this.watcher.on('change', (path) => this.refresh(path));
 		this.watcher.on('unlink', (path) => this.refresh(path));

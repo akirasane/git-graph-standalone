@@ -5,7 +5,7 @@ import * as path from 'path';
 import { AskpassEnvironment, AskpassManager } from './askpass/askpassManager';
 import { getConfig } from './config';
 import { Logger } from './logger';
-import { CommitOrdering, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, SquashMessageFormat, TagType, Writeable } from './types';
+import { CommitOrdering, ConflictOperation, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, SquashMessageFormat, TagType, Writeable } from './types';
 import { GitExecutable, GitVersionRequirement, UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, abbrevCommit, constructIncompatibleGitVersionMessage, doesVersionMeetRequirement, getPathFromStr, openGitTerminal, pathWithTrailingSlash, realpath, resolveSpawnOutput, showErrorMessage } from './utils';
 import { Disposable } from './utils/disposable';
 import { Event } from './utils/event';
@@ -1870,6 +1870,82 @@ export class DataSource extends Disposable {
 			}
 		}
 		return this.runGitCommand(args, repo);
+	}
+
+	/**
+	 * Detect an in-progress merge/rebase/cherry-pick/revert and list files with unresolved conflicts.
+	 */
+	public async getConflicts(repo: string): Promise<{ operation: ConflictOperation | null, files: string[], error: ErrorInfo }> {
+		try {
+			const gitDirRaw = await this.spawnGit(['rev-parse', '--git-dir'], repo, (out) => out.trim());
+			const gitDir = path.resolve(repo, gitDirRaw);
+			const has = (name: string) => fs.existsSync(path.join(gitDir, name));
+			const operation: ConflictOperation | null =
+				has('rebase-merge') || has('rebase-apply') ? 'rebase' :
+				has('CHERRY_PICK_HEAD') ? 'cherry-pick' :
+				has('REVERT_HEAD') ? 'revert' :
+				has('MERGE_HEAD') ? 'merge' : null;
+			const files = await this.spawnGit(['diff', '--name-only', '--diff-filter=U', '-z'], repo, (out) => out.split('\0').filter((f) => f !== ''));
+			return { operation: operation, files: files, error: null };
+		} catch (e) {
+			return { operation: null, files: [], error: String(e) };
+		}
+	}
+
+	private resolveRepoFile(repo: string, filePath: string): string {
+		const root = path.resolve(repo);
+		const full = path.resolve(root, filePath);
+		if (full !== root && !full.startsWith(root + path.sep)) throw new Error('Path is outside the repository.');
+		return full;
+	}
+
+	/**
+	 * Read a conflicted file from the working tree (with its conflict markers).
+	 */
+	public getConflictFile(repo: string, filePath: string): { content: string | null, error: ErrorInfo } {
+		try {
+			const full = this.resolveRepoFile(repo, filePath);
+			if (!fs.existsSync(full)) return { content: null, error: null };
+			if (fs.statSync(full).size > 5 * 1024 * 1024) return { content: null, error: 'File is too large to resolve in the built-in editor.' };
+			return { content: fs.readFileSync(full, 'utf8'), error: null };
+		} catch (e) {
+			return { content: null, error: String(e instanceof Error ? e.message : e) };
+		}
+	}
+
+	/**
+	 * Write the resolved content of a file and mark it resolved (`git add`).
+	 */
+	public async saveConflictFile(repo: string, filePath: string, content: string): Promise<ErrorInfo> {
+		try {
+			fs.writeFileSync(this.resolveRepoFile(repo, filePath), content, 'utf8');
+		} catch (e) {
+			return String(e instanceof Error ? e.message : e);
+		}
+		return this.runGitCommand(['add', '--', filePath], repo);
+	}
+
+	/**
+	 * Resolve a conflicted file by taking one side wholesale (removing it if that side deleted it).
+	 */
+	public async resolveConflictSide(repo: string, filePath: string, side: 'ours' | 'theirs'): Promise<ErrorInfo> {
+		const error = await this.runGitCommand(['checkout', '--' + side, '--', filePath], repo);
+		return error === null
+			? this.runGitCommand(['add', '--', filePath], repo)
+			: this.runGitCommand(['rm', '--', filePath], repo);
+	}
+
+	/**
+	 * Continue, skip or abort an in-progress merge/rebase/cherry-pick/revert.
+	 */
+	public conflictOperation(repo: string, operation: ConflictOperation, action: 'continue' | 'abort' | 'skip'): Promise<ErrorInfo> {
+		const editor = ['-c', 'core.editor=true'];
+		if (operation === 'merge') {
+			return action === 'abort'
+				? this.runGitCommand(['merge', '--abort'], repo)
+				: this.runGitCommand([...editor, 'commit', '--no-edit'], repo);
+		}
+		return this.runGitCommand([...editor, operation, '--' + action], repo);
 	}
 
 	/**

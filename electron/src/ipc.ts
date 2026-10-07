@@ -166,6 +166,25 @@ export class GitGraphIpcHandler {
 				this.sendMessage({ command: 'getUnstagedChanges', files: unstaged.files, error: unstaged.error });
 				break;
 			}
+			case 'getConflicts': {
+				const r = await this.dataSource.getConflicts(msg.repo);
+				this.sendMessage({ command: 'getConflicts', operation: r.operation, files: r.files, error: r.error });
+				break;
+			}
+			case 'getConflictFile': {
+				const r = this.dataSource.getConflictFile(msg.repo, msg.filePath);
+				this.sendMessage({ command: 'getConflictFile', filePath: msg.filePath, content: r.content, error: r.error });
+				break;
+			}
+			case 'saveConflictFile':
+				this.sendMessage({ command: 'saveConflictFile', filePath: msg.filePath, error: await this.dataSource.saveConflictFile(msg.repo, msg.filePath, msg.content) });
+				break;
+			case 'resolveConflictSide':
+				this.sendMessage({ command: 'resolveConflictSide', filePath: msg.filePath, error: await this.dataSource.resolveConflictSide(msg.repo, msg.filePath, msg.side) });
+				break;
+			case 'conflictOperation':
+				this.sendMessage({ command: 'conflictOperation', action: msg.action, error: await this.dataSource.conflictOperation(msg.repo, msg.operation, msg.action) });
+				break;
 			case 'discardFile':
 				this.sendMessage({
 					command: 'discardFile',

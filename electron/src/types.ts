@@ -688,6 +688,57 @@ export interface ResponseUnstageFile extends ResponseWithErrorInfo {
 	readonly command: 'unstageFile';
 }
 
+export type ConflictOperation = 'merge' | 'rebase' | 'cherry-pick' | 'revert';
+
+export interface RequestGetConflicts extends RepoRequest {
+	readonly command: 'getConflicts';
+}
+export interface ResponseGetConflicts extends ResponseWithErrorInfo {
+	readonly command: 'getConflicts';
+	readonly operation: ConflictOperation | null;
+	readonly files: ReadonlyArray<string>;
+}
+
+export interface RequestGetConflictFile extends RepoRequest {
+	readonly command: 'getConflictFile';
+	readonly filePath: string;
+}
+export interface ResponseGetConflictFile extends ResponseWithErrorInfo {
+	readonly command: 'getConflictFile';
+	readonly filePath: string;
+	readonly content: string | null;
+}
+
+export interface RequestSaveConflictFile extends RepoRequest {
+	readonly command: 'saveConflictFile';
+	readonly filePath: string;
+	readonly content: string;
+}
+export interface ResponseSaveConflictFile extends ResponseWithErrorInfo {
+	readonly command: 'saveConflictFile';
+	readonly filePath: string;
+}
+
+export interface RequestResolveConflictSide extends RepoRequest {
+	readonly command: 'resolveConflictSide';
+	readonly filePath: string;
+	readonly side: 'ours' | 'theirs';
+}
+export interface ResponseResolveConflictSide extends ResponseWithErrorInfo {
+	readonly command: 'resolveConflictSide';
+	readonly filePath: string;
+}
+
+export interface RequestConflictOperation extends RepoRequest {
+	readonly command: 'conflictOperation';
+	readonly operation: ConflictOperation;
+	readonly action: 'continue' | 'abort' | 'skip';
+}
+export interface ResponseConflictOperation extends ResponseWithErrorInfo {
+	readonly command: 'conflictOperation';
+	readonly action: 'continue' | 'abort' | 'skip';
+}
+
 export interface RequestDiscardFile extends RepoRequest {
 	readonly command: 'discardFile';
 	readonly filePath: string;
@@ -1337,6 +1388,11 @@ export type RequestMessage =
 	| RequestGetUnstagedChanges
 	| RequestStageAll
 	| RequestDiscardFile
+	| RequestGetConflicts
+	| RequestGetConflictFile
+	| RequestSaveConflictFile
+	| RequestResolveConflictSide
+	| RequestConflictOperation
 	| RequestDiscardAll
 	| RequestStageFile
 	| RequestUnstageAll
@@ -1410,6 +1466,11 @@ export type ResponseMessage =
 	| ResponseGetUnstagedChanges
 	| ResponseStageAll
 	| ResponseDiscardFile
+	| ResponseGetConflicts
+	| ResponseGetConflictFile
+	| ResponseSaveConflictFile
+	| ResponseResolveConflictSide
+	| ResponseConflictOperation
 	| ResponseDiscardAll
 	| ResponseStageFile
 	| ResponseUnstageAll

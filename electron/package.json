@@ -36,6 +36,8 @@
 			"dist/**/*",
 			"index.html",
 			"panel.js",
+			"sidebar.js",
+			"conflicts.js",
 			"package.json"
 		],
 		"extraResources": [

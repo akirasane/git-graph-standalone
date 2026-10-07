@@ -132,7 +132,7 @@ export class GitGraphIpcHandler {
 				});
 				break;
 			case 'commitChanges': {
-				const errors: ErrorInfo[] = [await this.dataSource.commitChanges(msg.repo, msg.summary, msg.description)];
+				const errors: ErrorInfo[] = [await this.dataSource.commitChanges(msg.repo, msg.summary, msg.description, msg.amend === true)];
 				let pushSkippedReason: string | null = null;
 				if (errors[0] === null && msg.push) {
 					const info = await this.dataSource.getRepoInfo(msg.repo, false, false, []);
@@ -166,6 +166,18 @@ export class GitGraphIpcHandler {
 				this.sendMessage({ command: 'getUnstagedChanges', files: unstaged.files, error: unstaged.error });
 				break;
 			}
+			case 'discardFile':
+				this.sendMessage({
+					command: 'discardFile',
+					error: await this.dataSource.discardFile(msg.repo, msg.filePath)
+				});
+				break;
+			case 'discardAll':
+				this.sendMessage({
+					command: 'discardAll',
+					error: await this.dataSource.discardAllChanges(msg.repo)
+				});
+				break;
 			case 'stageAll':
 				this.sendMessage({
 					command: 'stageAll',

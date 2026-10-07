@@ -31,7 +31,7 @@
 		return i === -1 ? filePath : filePath.substring(i + 1);
 	}
 
-	function renderFileList(container, files, actionIcon, actionTitle, onAction) {
+	function renderFileList(container, files, actionIcon, actionTitle, onAction, onDiscard) {
 		if (files.length === 0) {
 			container.innerHTML = '<li class="wcEmpty">No changes</li>';
 			return;
@@ -43,6 +43,7 @@
 			html += '<li class="wcFileRow" data-index="' + i + '">' +
 				'<span class="wcFileName" title="' + escapeHtml(f.newFilePath) + '">' + escapeHtml(fileName(f.newFilePath)) + '</span>' +
 				(hasStats ? '<span class="wcFileStats"><span class="wcAdd">+' + f.additions + '</span><span class="wcDel">-' + f.deletions + '</span></span>' : '') +
+				(onDiscard ? '<button type="button" class="wcFileAction wcDiscard" data-index="' + i + '" title="Discard Changes">↶</button>' : '') +
 				'<button type="button" class="wcFileAction" data-index="' + i + '" title="' + actionTitle + '">' + actionIcon + '</button>' +
 				'</li>';
 		}
@@ -50,7 +51,8 @@
 		Array.prototype.forEach.call(container.querySelectorAll('.wcFileAction'), function (btn) {
 			btn.addEventListener('click', function (e) {
 				e.stopPropagation();
-				onAction(files[parseInt(btn.dataset.index, 10)]);
+				var f = files[parseInt(btn.dataset.index, 10)];
+				if (btn.classList.contains('wcDiscard')) onDiscard(f); else onAction(f);
 			});
 		});
 		Array.prototype.forEach.call(container.querySelectorAll('.wcFileRow'), function (row) {
@@ -85,7 +87,8 @@
 	}
 
 	function updateCommitButton() {
-		els.commitBtn.disabled = !(els.stagedCount > 0 && els.summaryInput.value.trim() !== '');
+		var amend = els.amendCheckbox && els.amendCheckbox.checked;
+		els.commitBtn.disabled = amend ? false : !(els.stagedCount > 0 && els.summaryInput.value.trim() !== '');
 	}
 
 	function showMessage(text, isError) {
@@ -163,6 +166,14 @@
 			var repo = currentRepo();
 			if (repo !== null) post({ command: 'pushStash', repo: repo, message: '', includeUntracked: true });
 		});
+		els.amendCheckbox = document.getElementById('wcAmendCheckbox');
+		els.amendCheckbox.addEventListener('change', updateCommitButton);
+		document.getElementById('wcDiscardAllBtn').addEventListener('click', function () {
+			var repo = currentRepo();
+			if (repo !== null && window.confirm('Discard ALL unstaged changes and delete untracked files? This cannot be undone.')) {
+				post({ command: 'discardAll', repo: repo });
+			}
+		});
 		els.summaryInput.addEventListener('input', updateCommitButton);
 		els.commitBtn.addEventListener('click', function () {
 			var repo = currentRepo();
@@ -171,7 +182,8 @@
 				command: 'commitChanges', repo: repo,
 				summary: els.summaryInput.value.trim(),
 				description: els.descriptionInput.value.trim(),
-				push: els.pushCheckbox.checked
+				push: els.pushCheckbox.checked,
+				amend: els.amendCheckbox.checked
 			});
 			els.commitBtn.disabled = true;
 		});
@@ -194,6 +206,11 @@
 					renderFileList(els.unstagedList, msg.files || [], '+', 'Stage File', function (f) {
 						var repo = currentRepo();
 						if (repo !== null) post({ command: 'stageFile', repo: repo, filePath: f.newFilePath });
+					}, function (f) {
+						var repo = currentRepo();
+						if (repo !== null && window.confirm('Discard changes to "' + f.newFilePath + '"? This cannot be undone.')) {
+							post({ command: 'discardFile', repo: repo, filePath: f.newFilePath });
+						}
 					});
 					break;
 				case 'getStagedChanges':
@@ -208,6 +225,8 @@
 				case 'unstageFile':
 				case 'stageAll':
 				case 'unstageAll':
+				case 'discardFile':
+				case 'discardAll':
 					if (msg.error) showMessage(msg.error, true);
 					refreshAll();
 					break;
@@ -218,6 +237,7 @@
 					} else {
 						els.summaryInput.value = '';
 						els.descriptionInput.value = '';
+						els.amendCheckbox.checked = false;
 						showMessage(msg.pushSkippedReason || 'Committed successfully.', false);
 					}
 					updateCommitButton();

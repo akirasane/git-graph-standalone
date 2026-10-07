@@ -6,7 +6,7 @@ import { DataSource } from './dataSource';
 import { CodeReviewData, CodeReviews, Store } from './store';
 import { RepoManager } from './repoManager';
 import { getConfig } from './config';
-import { PickerItem, showPicker } from './pickerWindow';
+import { PickerItem, showInput, showPicker } from './pickerWindow';
 import { checkForUpdates } from './updater';
 import { GitExecutable, abbrevCommit, abbrevText, copyToClipboard, getAppVersion, getRelativeTimeDiff, getRepoName, getSortedRepositoryPaths, showErrorMessage, showInformationMessage } from './utils';
 
@@ -32,6 +32,14 @@ export function buildMenu(
 				{
 					label: 'Add Repository...',
 					click: () => addRepository(win, repoManager, getGitExecutable)
+				},
+				{
+					label: 'Clone Repository...',
+					click: () => cloneRepository(win, repoManager, dataSource, getGitExecutable)
+				},
+				{
+					label: 'Init Repository...',
+					click: () => initRepository(win, repoManager, dataSource, getGitExecutable)
 				},
 				{
 					label: 'Remove Repository...',
@@ -95,6 +103,44 @@ export async function addRepository(win: BrowserWindow, repoManager: RepoManager
 	} else {
 		showErrorMessage(status.error + ' Therefore it could not be added to Git Graph.');
 	}
+}
+
+async function cloneRepository(win: BrowserWindow, repoManager: RepoManager, dataSource: DataSource, getGitExecutable: () => GitExecutable | null) {
+	if (getGitExecutable() === null) {
+		showErrorMessage('Unable to find a Git executable.');
+		return;
+	}
+	const url = await showInput('Clone Repository', 'Repository URL (https://..., git@...):', 'https://github.com/user/repo.git');
+	if (url === null) return;
+	const dir = await dialog.showOpenDialog(win, { title: 'Clone into folder...', properties: ['openDirectory', 'createDirectory'] });
+	if (dir.canceled || dir.filePaths.length === 0) return;
+
+	win.setTitle('Git Graph - cloning...');
+	const result = await dataSource.cloneRepo(url, dir.filePaths[0]);
+	win.setTitle('Git Graph');
+	if (result.error !== null || result.path === null) {
+		showErrorMessage('Clone failed: ' + result.error);
+		return;
+	}
+	const status = await repoManager.registerRepo(result.path, true);
+	if (status.error !== null) showErrorMessage(status.error);
+}
+
+async function initRepository(win: BrowserWindow, repoManager: RepoManager, dataSource: DataSource, getGitExecutable: () => GitExecutable | null) {
+	if (getGitExecutable() === null) {
+		showErrorMessage('Unable to find a Git executable.');
+		return;
+	}
+	const dir = await dialog.showOpenDialog(win, { title: 'Folder to initialise as a Git repository', properties: ['openDirectory', 'createDirectory'] });
+	if (dir.canceled || dir.filePaths.length === 0) return;
+	const folder = dir.filePaths[0].replace(/\\/g, '/');
+	const error = await dataSource.initRepo(folder);
+	if (error !== null) {
+		showErrorMessage('git init failed: ' + error);
+		return;
+	}
+	const status = await repoManager.registerRepo(folder, true);
+	if (status.error !== null) showErrorMessage(status.error);
 }
 
 async function removeRepository(repoManager: RepoManager) {

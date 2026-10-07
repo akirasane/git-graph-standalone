@@ -688,6 +688,21 @@ export interface ResponseUnstageFile extends ResponseWithErrorInfo {
 	readonly command: 'unstageFile';
 }
 
+export interface RequestDiscardFile extends RepoRequest {
+	readonly command: 'discardFile';
+	readonly filePath: string;
+}
+export interface ResponseDiscardFile extends ResponseWithErrorInfo {
+	readonly command: 'discardFile';
+}
+
+export interface RequestDiscardAll extends RepoRequest {
+	readonly command: 'discardAll';
+}
+export interface ResponseDiscardAll extends ResponseWithErrorInfo {
+	readonly command: 'discardAll';
+}
+
 export interface RequestStageAll extends RepoRequest {
 	readonly command: 'stageAll';
 }
@@ -707,6 +722,7 @@ export interface RequestCommitChanges extends RepoRequest {
 	readonly summary: string;
 	readonly description: string;
 	readonly push: boolean;
+	readonly amend?: boolean;
 }
 export interface ResponseCommitChanges extends BaseMessage {
 	readonly command: 'commitChanges';
@@ -1320,6 +1336,8 @@ export type RequestMessage =
 	| RequestGetStagedChanges
 	| RequestGetUnstagedChanges
 	| RequestStageAll
+	| RequestDiscardFile
+	| RequestDiscardAll
 	| RequestStageFile
 	| RequestUnstageAll
 	| RequestUnstageFile
@@ -1391,6 +1409,8 @@ export type ResponseMessage =
 	| ResponseGetStagedChanges
 	| ResponseGetUnstagedChanges
 	| ResponseStageAll
+	| ResponseDiscardFile
+	| ResponseDiscardAll
 	| ResponseStageFile
 	| ResponseUnstageAll
 	| ResponseUnstageFile

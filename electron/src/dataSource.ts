@@ -1854,16 +1854,63 @@ export class DataSource extends Disposable {
 	 * @param description The commit message description (may be empty).
 	 * @returns The ErrorInfo from the executed command.
 	 */
-	public commitChanges(repo: string, summary: string, description: string): Promise<ErrorInfo> {
+	public commitChanges(repo: string, summary: string, description: string, amend: boolean = false): Promise<ErrorInfo> {
 		const args = ['commit'];
+		if (amend) {
+			args.push('--amend');
+			if (summary === '') args.push('--no-edit');
+		}
 		if (getConfig().signCommits) {
 			args.push('-S');
 		}
-		args.push('-m', summary);
-		if (description !== '') {
-			args.push('-m', description);
+		if (summary !== '') {
+			args.push('-m', summary);
+			if (description !== '') {
+				args.push('-m', description);
+			}
 		}
 		return this.runGitCommand(args, repo);
+	}
+
+	/**
+	 * Clone a repository into a new sub-folder of `parentDir`.
+	 * @returns The cloned repository's path (or an error message).
+	 */
+	public cloneRepo(url: string, parentDir: string): Promise<{ path: string | null, error: ErrorInfo }> {
+		const name = url.replace(/[\\/]+$/, '').replace(/\.git$/, '').split(/[\\/:]/).pop() || 'repository';
+		const target = path.join(parentDir, name);
+		return this.runGitCommand(['clone', '--', url, target], parentDir)
+			.then((error) => ({ path: error === null ? target.replace(/\\/g, '/') : null, error: error }));
+	}
+
+	/**
+	 * Run `git init` in a directory.
+	 */
+	public initRepo(dir: string): Promise<ErrorInfo> {
+		return this.runGitCommand(['init'], dir);
+	}
+
+	/**
+	 * Discard the working-tree changes to a file (tracked: restore from the index; untracked: delete).
+	 * Staged changes are left alone.
+	 * @param repo The path of the repository.
+	 * @param filePath The path of the file to discard.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public async discardFile(repo: string, filePath: string): Promise<ErrorInfo> {
+		const tracked = await this.spawnGit(['ls-files', '--error-unmatch', '--', filePath], repo, () => true).then(() => true, () => false);
+		return tracked
+			? this.runGitCommand(['checkout', '--', filePath], repo)
+			: this.runGitCommand(['clean', '-f', '-d', '--', filePath], repo);
+	}
+
+	/**
+	 * Discard all unstaged working-tree changes, including untracked files.
+	 * @param repo The path of the repository.
+	 * @returns The ErrorInfo from the executed command.
+	 */
+	public async discardAllChanges(repo: string): Promise<ErrorInfo> {
+		return (await this.runGitCommand(['checkout', '--', '.'], repo)) || this.runGitCommand(['clean', '-f', '-d'], repo);
 	}
 
 

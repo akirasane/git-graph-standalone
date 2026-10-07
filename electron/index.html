@@ -228,7 +228,8 @@
 			<div class="wcSection">
 				<div class="wcSectionHeader">
 					<span>Unstaged Changes</span>
-					<button type="button" id="wcStageAllBtn" class="wcSmallBtn" title="Stage All Changes">Stage All</button>
+					<span><button type="button" id="wcDiscardAllBtn" class="wcSmallBtn" title="Discard all unstaged changes (including untracked files)">Discard All</button>
+					<button type="button" id="wcStageAllBtn" class="wcSmallBtn" title="Stage All Changes">Stage All</button></span>
 				</div>
 				<ul id="wcUnstagedList" class="wcFileList"></ul>
 			</div>
@@ -242,6 +243,7 @@
 			<div class="wcCommitSection">
 				<input type="text" id="wcSummaryInput" placeholder="Commit summary" maxlength="72">
 				<textarea id="wcDescriptionInput" placeholder="Description (optional)" rows="3"></textarea>
+				<label class="wcPushLabel"><input type="checkbox" id="wcAmendCheckbox"> Amend last commit (empty summary keeps its message)</label>
 				<label class="wcPushLabel"><input type="checkbox" id="wcPushCheckbox"> Push after commit</label>
 				<button type="button" id="wcCommitBtn" class="wcCommitBtn" disabled>Commit</button>
 				<div id="wcCommitMessageArea" class="wcMessage"></div>

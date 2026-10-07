@@ -7,6 +7,7 @@ A fast, modern desktop Git client built around a clear commit graph. Browse your
 - **Repository hub** - one place to open, clone, create and organise all your repositories.
 - **Commit graph** - branches, merges, tags and stashes, with search and per-commit details.
 - **Working copy** - stage / unstage / discard, amend, commit (and push), stash.
+- **AI commit messages** - the ✨ button next to the commit summary asks your own [Claude Code](https://claude.com/claude-code) CLI to write the summary and description from your staged changes (the CLI must be installed and signed in; set `claudeCli.model` / `claudeCli.path` in `config.json` to change the model or location, default model is `haiku`).
 - **Sidebar** - local and remote branches, tags and stashes; double-click to check out, hover for merge / delete.
 - **Merge conflict resolver** - side-by-side ours / theirs with an editable result; continue, skip or abort the merge, rebase, cherry-pick or revert.
 - **Graph actions** - checkout, create / rename / delete branches, merge, rebase, cherry-pick, revert, reset, tags, fetch / pull / push, pull-request links.

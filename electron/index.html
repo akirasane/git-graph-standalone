@@ -323,7 +323,10 @@
 				<ul id="wcStagedList" class="wcFileList"></ul>
 			</div>
 			<div class="wcCommitSection">
-				<input type="text" id="wcSummaryInput" placeholder="Commit summary" maxlength="72">
+				<div class="wcSummaryRow">
+					<input type="text" id="wcSummaryInput" placeholder="Commit summary" maxlength="72">
+					<button type="button" id="wcAiBtn" class="wcAiBtn" title="Write the commit message with Claude Code (uses your staged changes)"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg></button>
+				</div>
 				<textarea id="wcDescriptionInput" placeholder="Description (optional)" rows="3"></textarea>
 				<label class="wcPushLabel"><input type="checkbox" id="wcAmendCheckbox"> Amend last commit (empty summary keeps its message)</label>
 				<label class="wcPushLabel"><input type="checkbox" id="wcPushCheckbox"> Push after commit</label>

@@ -232,6 +232,26 @@ body{
 .wcCommitBtn:disabled{ background:var(--surface-3) !important; color:var(--muted) !important; }
 .wcPushLabel input[type="checkbox"]{ accent-color:var(--accent); }
 
+/* ---------- AI commit message (Claude Code) ---------- */
+.wcSummaryRow{ display:flex; gap:6px; }
+.wcSummaryRow input{ flex:1; min-width:0; }
+.wcAiBtn{
+	position:relative; flex:none; width:36px; border-radius:9px; border:1px solid rgba(124,140,255,.4); cursor:pointer;
+	background:linear-gradient(135deg,rgba(124,140,255,.2),rgba(79,209,229,.14)); color:var(--accent); display:grid; place-items:center;
+	transition:transform .2s var(--ease), box-shadow .25s, border-color .2s, background .2s;
+}
+.wcAiBtn svg{ width:17px; height:17px; fill:currentColor; stroke:none; transition:transform .4s var(--ease); }
+.wcAiBtn:hover{ transform:translateY(-1px); box-shadow:0 6px 22px rgba(124,140,255,.4); border-color:var(--accent); color:#fff; }
+.wcAiBtn:hover svg{ transform:rotate(18deg) scale(1.12); }
+.wcAiBtn:active{ transform:scale(.95); }
+.wcAiBtn.busy{ pointer-events:none; color:var(--accent-2); }
+.wcAiBtn.busy svg{ animation:fx-twinkle 1s ease-in-out infinite; }
+@keyframes fx-twinkle{ 0%,100%{ transform:scale(.8) rotate(0); opacity:.6; } 50%{ transform:scale(1.2) rotate(90deg); opacity:1; } }
+.wcAiThinking{
+	background-image:linear-gradient(90deg,transparent 25%,rgba(124,140,255,.22) 50%,transparent 75%) !important;
+	background-size:200% 100% !important; animation:fx-shine 1.3s linear infinite;
+}
+
 /* commit details (right panel when a commit is open) */
 #cdv.docked{ background:linear-gradient(180deg,#0f1219,#0c0e14) !important; border-left:1px solid var(--line) !important; animation:fx-fade .3s ease; }
 #cdv.docked #cdvSummary, #cdv.docked #cdvFiles{ border-color:var(--line) !important; }

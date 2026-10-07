@@ -739,6 +739,16 @@ export interface ResponseConflictOperation extends ResponseWithErrorInfo {
 	readonly action: 'continue' | 'abort' | 'skip';
 }
 
+export interface RequestGenerateCommitMessage extends RepoRequest {
+	readonly command: 'generateCommitMessage';
+	readonly amend: boolean;
+}
+export interface ResponseGenerateCommitMessage extends ResponseWithErrorInfo {
+	readonly command: 'generateCommitMessage';
+	readonly summary: string;
+	readonly description: string;
+}
+
 export interface RequestDiscardFile extends RepoRequest {
 	readonly command: 'discardFile';
 	readonly filePath: string;
@@ -1388,6 +1398,7 @@ export type RequestMessage =
 	| RequestGetUnstagedChanges
 	| RequestStageAll
 	| RequestDiscardFile
+	| RequestGenerateCommitMessage
 	| RequestGetConflicts
 	| RequestGetConflictFile
 	| RequestSaveConflictFile
@@ -1466,6 +1477,7 @@ export type ResponseMessage =
 	| ResponseGetUnstagedChanges
 	| ResponseStageAll
 	| ResponseDiscardFile
+	| ResponseGenerateCommitMessage
 	| ResponseGetConflicts
 	| ResponseGetConflictFile
 	| ResponseSaveConflictFile

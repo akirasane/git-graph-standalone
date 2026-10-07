@@ -1971,6 +1971,32 @@ export class DataSource extends Disposable {
 			.then((error) => ({ path: error === null ? target.replace(/\\/g, '/') : null, error: error }));
 	}
 
+	/**
+	 * The staged diff (plus a stat summary and recent commit subjects) used to generate a commit message.
+	 * Lock files and minified/map files are left out to keep the prompt small and relevant. When amending
+	 * with nothing staged, the diff of the last commit is used instead.
+	 */
+	public async getStagedDiffForAi(repo: string, amend: boolean, maxChars: number): Promise<{ stat: string, diff: string, recent: string[], truncated: boolean }> {
+		const excludes = ['--', '.', ':(exclude)package-lock.json', ':(exclude)yarn.lock', ':(exclude)pnpm-lock.yaml', ':(exclude)*.min.js', ':(exclude)*.min.css', ':(exclude)*.map'];
+		const read = (base: string[]) => Promise.all([
+			this.spawnGit([...base, '--stat', '--no-color', ...excludes], repo, (o) => o),
+			this.spawnGit([...base, '--no-color', '-U3', ...excludes], repo, (o) => o)
+		]);
+
+		let [stat, diff] = await read(['diff', '--cached']);
+		if (diff.trim() === '' && amend) {
+			[stat, diff] = await read(['show', 'HEAD', '--format=']);
+		}
+		const truncated = diff.length > maxChars;
+		if (truncated) diff = diff.slice(0, maxChars);
+
+		let recent: string[] = [];
+		try {
+			recent = await this.spawnGit(['log', '-n', '8', '--format=%s'], repo, (o) => o.split('\n').map((l) => l.trim()).filter((l) => l !== ''));
+		} catch (_) { /* repository has no commits yet */ }
+		return { stat: stat, diff: diff, recent: recent, truncated: truncated };
+	}
+
 	/** Derive a sensible folder name from a clone URL (https://host/user/repo.git -> repo). */
 	public static repoNameFromUrl(url: string): string {
 		return url.trim().replace(/[\\/]+$/, '').replace(/\.git$/, '').split(/[\\/:]/).pop() || 'repository';

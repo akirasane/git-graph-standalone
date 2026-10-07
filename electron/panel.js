@@ -91,6 +91,54 @@
 		els.commitBtn.disabled = amend ? false : !(els.stagedCount > 0 && els.summaryInput.value.trim() !== '');
 	}
 
+	/* ---- AI commit message (Claude Code CLI) ---- */
+
+	function setAiBusy(busy) {
+		els.aiBusy = busy;
+		els.aiBtn.classList.toggle('busy', busy);
+		[els.summaryInput, els.descriptionInput].forEach(function (el) {
+			el.readOnly = busy;
+			el.classList.toggle('wcAiThinking', busy);
+		});
+		if (busy) {
+			els.summaryPlaceholder = els.summaryInput.placeholder;
+			els.summaryInput.placeholder = 'Claude is writing\u2026';
+		} else if (els.summaryPlaceholder) {
+			els.summaryInput.placeholder = els.summaryPlaceholder;
+		}
+	}
+
+	// Types the text into the field quickly, so the result feels written rather than dropped in.
+	function typeInto(el, text, done) {
+		var i = 0, step = Math.max(1, Math.ceil(text.length / 36));
+		el.value = '';
+		if (text === '') { done(); return; }
+		var timer = setInterval(function () {
+			i = Math.min(text.length, i + step);
+			el.value = text.substring(0, i);
+			el.scrollTop = el.scrollHeight;
+			if (i >= text.length) { clearInterval(timer); el.dispatchEvent(new Event('input')); done(); }
+		}, 16);
+	}
+
+	function generateMessage() {
+		var repo = currentRepo();
+		if (repo === null || els.aiBusy) return;
+		var amend = els.amendCheckbox.checked;
+		if (els.stagedCount === 0 && !amend) {
+			showMessage('Stage some changes first, then generate a message.', true);
+			return;
+		}
+		var consented = false;
+		try { consented = localStorage.getItem('ggAiConsent') === '1'; } catch (e) { /* storage unavailable */ }
+		if (!consented) {
+			if (!window.confirm('Write the commit message with Claude Code?\n\nThe diff of your staged changes is sent to Anthropic through your own Claude Code CLI (it must be installed and signed in). You will only be asked this once.')) return;
+			try { localStorage.setItem('ggAiConsent', '1'); } catch (e) { /* ignore */ }
+		}
+		setAiBusy(true);
+		post({ command: 'generateCommitMessage', repo: repo, amend: amend });
+	}
+
 	function showMessage(text, isError) {
 		els.messageArea.textContent = text;
 		els.messageArea.className = 'wcMessage' + (isError ? ' wcError' : '');
@@ -174,6 +222,8 @@
 				post({ command: 'discardAll', repo: repo });
 			}
 		});
+		els.aiBtn = document.getElementById('wcAiBtn');
+		els.aiBtn.addEventListener('click', generateMessage);
 		els.summaryInput.addEventListener('input', updateCommitButton);
 		els.commitBtn.addEventListener('click', function () {
 			var repo = currentRepo();
@@ -220,6 +270,13 @@
 						if (repo !== null) post({ command: 'unstageFile', repo: repo, filePath: f.newFilePath, oldFilePath: f.oldFilePath !== f.newFilePath ? f.oldFilePath : null });
 					});
 					updateCommitButton();
+					break;
+				case 'generateCommitMessage':
+					setAiBusy(false);
+					if (msg.error) { showMessage(msg.error, true); break; }
+					typeInto(els.summaryInput, msg.summary, function () {
+						typeInto(els.descriptionInput, msg.description, updateCommitButton);
+					});
 					break;
 				case 'stageFile':
 				case 'unstageFile':

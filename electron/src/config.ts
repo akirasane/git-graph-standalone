@@ -236,6 +236,16 @@ export class Config {
 		};
 	}
 
+	/** Optional path to the Claude Code CLI (auto-detected when empty); used to generate commit messages. */
+	get claudeCliPath(): string {
+		return this.config.get('claudeCli.path', '');
+	}
+
+	/** Model alias/name passed to the Claude Code CLI for commit message generation. */
+	get claudeCliModel(): string {
+		return this.config.get('claudeCli.model', 'haiku');
+	}
+
 	get maxDepthOfRepoSearch() {
 		return this.config.get('maxDepthOfRepoSearch', 0);
 	}

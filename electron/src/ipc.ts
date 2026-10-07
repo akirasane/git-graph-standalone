@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron';
 import { AvatarManager } from './avatarManager';
+import { generateCommitMessage } from './claudeCli';
 import { DataSource, GitCommitDetailsData, GitConfigKey } from './dataSource';
 import { RepoFileWatcher } from './repoFileWatcher';
 import { RepoManager } from './repoManager';
@@ -195,6 +196,11 @@ export class GitGraphIpcHandler {
 			case 'conflictOperation':
 				this.sendMessage({ command: 'conflictOperation', action: msg.action, error: await this.dataSource.conflictOperation(msg.repo, msg.operation, msg.action) });
 				break;
+			case 'generateCommitMessage': {
+				const r = await generateCommitMessage(this.dataSource, msg.repo, msg.amend === true);
+				this.sendMessage({ command: 'generateCommitMessage', summary: r.summary, description: r.description, error: r.error });
+				break;
+			}
 			case 'discardFile':
 				this.sendMessage({
 					command: 'discardFile',

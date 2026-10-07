@@ -201,6 +201,19 @@ export class GitGraphIpcHandler {
 				this.sendMessage({ command: 'generateCommitMessage', summary: r.summary, description: r.description, error: r.error });
 				break;
 			}
+			case 'getSyncStatus': {
+				try {
+					this.sendMessage({ command: 'getSyncStatus', status: await this.dataSource.getSyncStatus(msg.repo), error: null });
+				} catch (e) {
+					this.sendMessage({ command: 'getSyncStatus', status: null, error: String(e) });
+				}
+				break;
+			}
+			case 'syncBranch': {
+				const r = await this.dataSource.syncBranch(msg.repo, msg.action);
+				this.sendMessage({ command: 'syncBranch', action: msg.action, message: r.message, error: r.error });
+				break;
+			}
 			case 'discardFile':
 				this.sendMessage({
 					command: 'discardFile',

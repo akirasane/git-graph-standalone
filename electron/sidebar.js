@@ -131,16 +131,102 @@
 		}
 	}
 
+	/* ---------- Pull / Push / Fetch bar ---------- */
+
+	var sync = { status: null, busy: null };
+	var syncTimer = null;
+
+	function toast(text, kind) {
+		var box = document.getElementById('ggToasts');
+		if (!box) { box = document.createElement('div'); box.id = 'ggToasts'; document.body.appendChild(box); }
+		var t = document.createElement('div');
+		t.className = 'ggToast ' + (kind || '');
+		t.textContent = text.length > 420 ? text.slice(0, 417) + '...' : text;
+		box.appendChild(t);
+		var life = kind === 'bad' ? 9000 : 3200;
+		setTimeout(function () { t.style.transition = 'opacity .3s, transform .3s'; t.style.opacity = '0'; t.style.transform = 'translateY(6px)'; }, life);
+		setTimeout(function () { t.remove(); }, life + 400);
+	}
+
+	function setBadge(btn, n) {
+		var b = btn.querySelector('.sbBadge');
+		b.hidden = !(n > 0);
+		b.textContent = n > 99 ? '99+' : String(n);
+	}
+
+	function renderSync() {
+		var s = sync.status;
+		var pull = document.getElementById('sbPull'), push = document.getElementById('sbPush'), fetchBtn = document.getElementById('sbFetch');
+		var line = document.getElementById('sbBranchLine');
+		var hasRepo = currentRepo() !== null && s !== null;
+		var branch = hasRepo ? s.branch : null;
+		line.querySelector('.sbBl-branch').textContent = branch || (hasRepo ? 'detached HEAD' : '-');
+		line.querySelector('.sbBl-up').textContent = hasRepo && branch ? (s.upstream || 'not published yet') : '';
+		line.classList.toggle('unpublished', hasRepo && !!branch && !s.upstream);
+		line.title = hasRepo && s.upstream ? s.ahead + ' to push, ' + s.behind + ' to pull' : '';
+		pull.disabled = !hasRepo || !branch || !s.upstream || sync.busy !== null;
+		push.disabled = !hasRepo || !branch || s.remotes.length === 0 || sync.busy !== null;
+		fetchBtn.disabled = !hasRepo || s.remotes.length === 0 || sync.busy !== null;
+		var unpublished = hasRepo && !!branch && !s.upstream && s.remotes.length > 0;
+		push.classList.toggle('unpublished', unpublished);
+		push.querySelector('span').textContent = unpublished ? 'Publish' : 'Push';
+		push.title = unpublished ? 'Publish this branch to the remote and set its upstream' : 'Push the current branch';
+		setBadge(pull, hasRepo ? s.behind : 0);
+		setBadge(push, hasRepo ? s.ahead : 0);
+		pull.classList.toggle('hot', hasRepo && s.behind > 0);
+		push.classList.toggle('hot', hasRepo && (s.ahead > 0 || (!!branch && !s.upstream && s.remotes.length > 0)));
+		pull.classList.toggle('busy', sync.busy === 'pull');
+		push.classList.toggle('busy', sync.busy === 'push');
+		fetchBtn.classList.toggle('busy', sync.busy === 'fetch');
+	}
+
+	function requestSyncStatus() {
+		clearTimeout(syncTimer);
+		syncTimer = setTimeout(function () {
+			var repo = currentRepo();
+			if (repo !== null) post({ command: 'getSyncStatus', repo: repo });
+		}, 120);
+	}
+
+	function runSync(kind) {
+		var repo = currentRepo();
+		if (repo === null || sync.busy !== null || sync.status === null) return;
+		sync.busy = kind;
+		renderSync();
+		if (kind === 'fetch') post({ command: 'fetch', repo: repo, name: null, prune: false, pruneTags: false });
+		else post({ command: 'syncBranch', repo: repo, action: kind });
+	}
+
+	// Turns raw git output into something readable; unknown errors fall back to git's own first lines.
+	function friendlyError(kind, error) {
+		var title = (kind === 'fetch' ? 'Fetch' : kind === 'push' ? 'Push' : 'Pull') + ' failed';
+		if (/rejected|fetch first|non-fast-forward/i.test(error)) return title + '\nThe remote has commits you don\'t have yet. Pull first, then push again.';
+		if (/CONFLICT|Automatic merge failed|unmerged|merge conflict/i.test(error)) return title + '\nMerge conflicts - resolve them from the banner in the sidebar, then continue.';
+		if (/Authentication failed|could not read Username|Permission denied|403|401/i.test(error)) return title + '\nAuthentication failed. Check your credentials for this remote.';
+		if (/overwritten by merge|local changes/i.test(error)) return title + '\nYou have uncommitted changes that would be overwritten. Commit or stash them first.';
+		var lines = error.split('\n').filter(function (l) { return !/^(hint:|To )/.test(l.trim()) && l.trim() !== ''; });
+		return title + '\n' + lines.slice(0, 3).join('\n');
+	}
+
+	function finishSync(kind, error, message) {
+		sync.busy = null;
+		if (error) toast(friendlyError(kind, String(error)), 'bad');
+		else toast(message || 'Fetched all remotes', 'good');
+		renderSync();
+		requestSyncStatus();
+		if (window.gitGraph) window.gitGraph.refresh(false);
+	}
+
 	function init() {
 		els.root = document.getElementById('sidebar');
 		els.body = document.getElementById('sbBody');
 		els.filter = document.getElementById('sbFilter');
 
 		els.filter.addEventListener('input', function () { filter = els.filter.value.trim().toLowerCase(); render(); });
-		document.getElementById('sbFetchBtn').addEventListener('click', function () {
-			var repo = currentRepo();
-			if (repo !== null) post({ command: 'fetch', repo: repo, name: null, prune: false, pruneTags: false });
-		});
+		document.getElementById('sbPull').addEventListener('click', function () { runSync('pull'); });
+		document.getElementById('sbPush').addEventListener('click', function () { runSync('push'); });
+		document.getElementById('sbFetch').addEventListener('click', function () { runSync('fetch'); });
+		window.addEventListener('focus', requestSyncStatus);
 
 		els.body.addEventListener('click', function (e) {
 			var header = e.target.closest('.sbHeader');
@@ -165,7 +251,16 @@
 		window.addEventListener('message', function (event) {
 			var msg = event.data;
 			if (!msg || typeof msg.command !== 'string') return;
+			if (msg.command === 'getSyncStatus') {
+				sync.status = msg.error ? null : msg.status;
+				renderSync();
+				return;
+			}
+			if (msg.command === 'syncBranch') { finishSync(msg.action, msg.error, msg.message); return; }
+			if (msg.command === 'fetch' && sync.busy === 'fetch') { finishSync('fetch', msg.error, null); return; }
+			if (msg.command === 'refresh' || msg.command === 'loadCommits') requestSyncStatus();
 			if (msg.command === 'loadRepoInfo' && msg.error === null) {
+				requestSyncStatus();
 				data.branches = msg.branches || [];
 				data.head = msg.head;
 				data.remotes = msg.remotes || [];
@@ -178,6 +273,8 @@
 		});
 
 		render();
+		renderSync();
+		requestSyncStatus();
 	}
 
 	window.addEventListener('load', init);

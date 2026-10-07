@@ -184,6 +184,37 @@ body{
 .sbBtn:hover{ background:var(--accent) !important; transform:scale(1.08); }
 .sbRemoteName{ color:var(--muted); font-weight:600; letter-spacing:.03em; }
 
+/* sync bar: Pull / Push / Fetch */
+#sbSync{ padding:10px 10px 8px; border-bottom:1px solid var(--line); }
+#sbBranchLine{ display:flex; align-items:center; gap:6px; margin:0 2px 8px; font-size:11.5px; color:var(--muted); min-width:0; }
+#sbBranchLine .sbBl-branch{ color:var(--text); font-weight:650; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:0 1 auto; }
+#sbBranchLine .sbBl-arrow{ flex:none; opacity:.6; }
+#sbBranchLine .sbBl-up{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1 1 0; min-width:0; }
+#sbBranchLine.unpublished .sbBl-up{ color:var(--warn); }
+.sbSyncBtns{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.sbSyncBtn{
+	position:relative; display:flex; align-items:center; justify-content:center; gap:6px; height:32px; border-radius:9px; cursor:pointer;
+	background:rgba(255,255,255,.05); border:1px solid var(--line-strong); color:var(--text); font:inherit; font-size:12px; font-weight:600;
+	transition:transform .2s var(--ease), background .2s, border-color .2s, box-shadow .25s;
+}
+.sbSyncBtn svg{ width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition:transform .25s var(--ease); }
+.sbSyncBtn:hover:not(:disabled){ background:var(--accent-soft); border-color:rgba(124,140,255,.55); transform:translateY(-1px); }
+#sbPull:hover:not(:disabled) svg{ transform:translateY(2px); }
+#sbPush:hover:not(:disabled) svg{ transform:translateY(-2px); }
+#sbFetch:hover:not(:disabled) svg{ transform:rotate(90deg); }
+.sbSyncBtn:active:not(:disabled){ transform:scale(.96); }
+.sbSyncBtn:disabled{ opacity:.45; cursor:default; }
+.sbSyncBtn.hot{ border-color:rgba(124,140,255,.6); background:linear-gradient(135deg,rgba(124,140,255,.22),rgba(79,209,229,.12)); box-shadow:0 0 16px -4px rgba(124,140,255,.55); }
+.sbSyncBtn.busy svg{ animation:fx-spin .8s linear infinite; }
+@keyframes fx-spin{ to{ transform:rotate(360deg); } }
+.sbBadge{ min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:999px; font-size:10px; line-height:16px; text-align:center; font-weight:700; background:var(--grad); color:#0b0d12; animation:fx-pop .3s var(--ease); }
+
+/* toasts */
+#ggToasts{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:70; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; max-width:min(560px,90vw); }
+.ggToast{ padding:10px 16px; border-radius:12px; background:rgba(23,27,36,.96); backdrop-filter:blur(14px); border:1px solid var(--line-strong); box-shadow:0 14px 40px rgba(0,0,0,.55); font-size:13px; line-height:1.45; animation:fx-rise .3s var(--ease); white-space:pre-line; word-break:break-word; }
+.ggToast.good{ border-color:rgba(74,222,128,.45); }
+.ggToast.bad{ border-color:rgba(255,107,129,.55); color:#ffd0d6; }
+
 #sbConflicts{
 	margin:8px; border-radius:12px; border:1px solid rgba(251,191,36,.35) !important; border-bottom-width:1px !important;
 	background:linear-gradient(135deg,rgba(251,191,36,.14),rgba(255,107,129,.08)) !important; animation:fx-pop .3s var(--ease);

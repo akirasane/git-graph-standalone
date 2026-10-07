@@ -749,6 +749,32 @@ export interface ResponseGenerateCommitMessage extends ResponseWithErrorInfo {
 	readonly description: string;
 }
 
+export interface SyncStatus {
+	readonly branch: string | null; // null => detached HEAD
+	readonly upstream: string | null; // e.g. "origin/main"; null => not published yet
+	readonly ahead: number;
+	readonly behind: number;
+	readonly remotes: ReadonlyArray<string>;
+}
+
+export interface RequestGetSyncStatus extends RepoRequest {
+	readonly command: 'getSyncStatus';
+}
+export interface ResponseGetSyncStatus extends ResponseWithErrorInfo {
+	readonly command: 'getSyncStatus';
+	readonly status: SyncStatus | null;
+}
+
+export interface RequestSyncBranch extends RepoRequest {
+	readonly command: 'syncBranch';
+	readonly action: 'push' | 'pull';
+}
+export interface ResponseSyncBranch extends ResponseWithErrorInfo {
+	readonly command: 'syncBranch';
+	readonly action: 'push' | 'pull';
+	readonly message: string;
+}
+
 export interface RequestDiscardFile extends RepoRequest {
 	readonly command: 'discardFile';
 	readonly filePath: string;
@@ -1398,6 +1424,8 @@ export type RequestMessage =
 	| RequestGetUnstagedChanges
 	| RequestStageAll
 	| RequestDiscardFile
+	| RequestGetSyncStatus
+	| RequestSyncBranch
 	| RequestGenerateCommitMessage
 	| RequestGetConflicts
 	| RequestGetConflictFile
@@ -1477,6 +1505,8 @@ export type ResponseMessage =
 	| ResponseGetUnstagedChanges
 	| ResponseStageAll
 	| ResponseDiscardFile
+	| ResponseGetSyncStatus
+	| ResponseSyncBranch
 	| ResponseGenerateCommitMessage
 	| ResponseGetConflicts
 	| ResponseGetConflictFile

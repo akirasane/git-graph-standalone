@@ -5,7 +5,7 @@ import * as path from 'path';
 import { AskpassEnvironment, AskpassManager } from './askpass/askpassManager';
 import { getConfig } from './config';
 import { Logger } from './logger';
-import { CommitOrdering, ConflictOperation, DateType, DeepWriteable, ErrorInfo, ErrorInfoAppPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, SquashMessageFormat, TagType, Writeable } from './types';
+import { CommitOrdering, ConflictOperation, SyncStatus, DateType, DeepWriteable, ErrorInfo, ErrorInfoAppPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, SquashMessageFormat, TagType, Writeable } from './types';
 import { GitExecutable, GitVersionRequirement, UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, abbrevCommit, constructIncompatibleGitVersionMessage, doesVersionMeetRequirement, getPathFromStr, openGitTerminal, pathWithTrailingSlash, realpath, resolveSpawnOutput, showErrorMessage } from './utils';
 import { Disposable } from './utils/disposable';
 import { Event } from './utils/event';
@@ -1995,6 +1995,69 @@ export class DataSource extends Disposable {
 			recent = await this.spawnGit(['log', '-n', '8', '--format=%s'], repo, (o) => o.split('\n').map((l) => l.trim()).filter((l) => l !== ''));
 		} catch (_) { /* repository has no commits yet */ }
 		return { stat: stat, diff: diff, recent: recent, truncated: truncated };
+	}
+
+	/**
+	 * The current branch, its upstream and how far ahead/behind it is - drives the Pull / Push buttons.
+	 */
+	public async getSyncStatus(repo: string): Promise<SyncStatus> {
+		const run = (args: string[]) => this.spawnGit(args, repo, (o) => o.trim());
+		const remotes = await run(['remote']).then((o) => o.split('\n').map((r) => r.trim()).filter((r) => r !== ''), () => [] as string[]);
+		let branch: string | null = null;
+		try {
+			const name = await run(['rev-parse', '--abbrev-ref', 'HEAD']);
+			branch = name === 'HEAD' ? null : name;
+		} catch (_) {
+			// Unborn branch (no commits yet): ask for the symbolic name instead.
+			branch = await run(['symbolic-ref', '--short', 'HEAD']).catch(() => null);
+		}
+		let upstream: string | null = null, ahead = 0, behind = 0;
+		if (branch !== null) {
+			try {
+				upstream = await run(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}']);
+				const counts = (await run(['rev-list', '--left-right', '--count', 'HEAD...@{upstream}'])).split(/\s+/);
+				ahead = parseInt(counts[0], 10) || 0;
+				behind = parseInt(counts[1], 10) || 0;
+			} catch (_) {
+				upstream = null; // not published, or the upstream branch no longer exists
+			}
+		}
+		return { branch: branch, upstream: upstream, ahead: ahead, behind: behind, remotes: remotes };
+	}
+
+	/**
+	 * Push or pull the current branch. A branch without an upstream is published to "origin" (or the
+	 * only/first remote) and its upstream is set. Pull never fails just because git can't decide
+	 * between merge and rebase: unless the user configured pull.rebase, it merges.
+	 */
+	public async syncBranch(repo: string, action: 'push' | 'pull'): Promise<{ message: string, error: ErrorInfo }> {
+		const status = await this.getSyncStatus(repo);
+		if (status.branch === null) return { message: '', error: 'HEAD is detached - check out a branch first.' };
+		if (status.remotes.length === 0) return { message: '', error: 'This repository has no remote. Add one in the repository settings first.' };
+
+		if (action === 'push') {
+			if (status.upstream !== null) {
+				const slash = status.upstream.indexOf('/');
+				const remote = status.upstream.substring(0, slash), remoteBranch = status.upstream.substring(slash + 1);
+				const args = remoteBranch === status.branch ? ['push', remote, status.branch] : ['push', remote, status.branch + ':' + remoteBranch];
+				const error = await this.runGitCommand(args, repo);
+				return { message: error === null ? 'Pushed ' + status.branch + ' to ' + status.upstream : '', error: error };
+			}
+			const remote = status.remotes.includes('origin') ? 'origin' : status.remotes[0];
+			const error = await this.pushBranch(repo, status.branch, remote, true, GitPushBranchMode.Normal);
+			return { message: error === null ? 'Published ' + status.branch + ' to ' + remote : '', error: error };
+		}
+
+		if (status.upstream === null) return { message: '', error: 'This branch has no upstream yet - push it first.' };
+		const slash = status.upstream.indexOf('/');
+		const remote = status.upstream.substring(0, slash), remoteBranch = status.upstream.substring(slash + 1);
+		const rebaseConfigured = await this.spawnGit(['config', '--get', 'pull.rebase'], repo, (o) => o.trim() !== '').catch(() => false);
+		const args = ['pull'];
+		if (!rebaseConfigured) args.push('--no-rebase');
+		if (getConfig().signCommits) args.push('-S');
+		args.push(remote, remoteBranch);
+		const error = await this.runGitCommand(args, repo);
+		return { message: error === null ? 'Pulled ' + status.upstream + ' into ' + status.branch : '', error: error };
 	}
 
 	/** Derive a sensible folder name from a clone URL (https://host/user/repo.git -> repo). */

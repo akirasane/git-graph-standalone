@@ -287,7 +287,15 @@
 	<div id="scrollShadow"></div>
 	<div id="sidebar">
 		<button type="button" id="sbHome" title="Back to all repositories (Ctrl+Shift+H)"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg><span>Repositories</span></button>
-		<div id="sbTop"><input type="text" id="sbFilter" placeholder="Filter branches, tags, stashes"><button type="button" id="sbFetchBtn" class="wcSmallBtn" title="Fetch all remotes">Fetch</button></div>
+		<div id="sbSync">
+			<div id="sbBranchLine" title=""><span class="sbBl-branch">-</span><span class="sbBl-arrow">→</span><span class="sbBl-up">no upstream</span></div>
+			<div class="sbSyncBtns">
+				<button type="button" id="sbPull" class="sbSyncBtn" title="Pull (fetch and merge the upstream branch)"><svg viewBox="0 0 24 24"><path d="M12 4v13m0 0-5-5m5 5 5-5M5 21h14"/></svg><span>Pull</span><b class="sbBadge" hidden></b></button>
+				<button type="button" id="sbPush" class="sbSyncBtn" title="Push the current branch"><svg viewBox="0 0 24 24"><path d="M12 20V7m0 0-5 5m5-5 5 5M5 3h14"/></svg><span>Push</span><b class="sbBadge" hidden></b></button>
+				<button type="button" id="sbFetch" class="sbSyncBtn" title="Fetch all remotes"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg><span>Fetch</span></button>
+			</div>
+		</div>
+		<div id="sbTop"><input type="text" id="sbFilter" placeholder="Filter branches, tags, stashes"></div>
 		<div id="sbConflicts" style="display:none"></div>
 		<div id="sbScroll"><div id="sbBody"></div></div>
 	</div>

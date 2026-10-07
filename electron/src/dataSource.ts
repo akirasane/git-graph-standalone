@@ -11,6 +11,18 @@ import { Disposable } from './utils/disposable';
 import { Event } from './utils/event';
 
 /** Emitted when a setting that affects Git commands changes. */
+/** Snapshot of a repository shown on the repository hub. */
+export interface RepoSummary {
+	branch: string | null;
+	detached: boolean;
+	ahead: number;
+	behind: number;
+	changes: number;
+	lastCommit: { date: number, author: string, subject: string } | null;
+	remoteUrl: string | null;
+	error: string | null;
+}
+
 export interface ConfigChangeEvent {
 	affectsConfiguration(section: string): boolean;
 }
@@ -1952,11 +1964,61 @@ export class DataSource extends Disposable {
 	 * Clone a repository into a new sub-folder of `parentDir`.
 	 * @returns The cloned repository's path (or an error message).
 	 */
-	public cloneRepo(url: string, parentDir: string): Promise<{ path: string | null, error: ErrorInfo }> {
-		const name = url.replace(/[\\/]+$/, '').replace(/\.git$/, '').split(/[\\/:]/).pop() || 'repository';
+	public cloneRepo(url: string, parentDir: string, folderName?: string): Promise<{ path: string | null, error: ErrorInfo }> {
+		const name = folderName || DataSource.repoNameFromUrl(url);
 		const target = path.join(parentDir, name);
 		return this.runGitCommand(['clone', '--', url, target], parentDir)
 			.then((error) => ({ path: error === null ? target.replace(/\\/g, '/') : null, error: error }));
+	}
+
+	/** Derive a sensible folder name from a clone URL (https://host/user/repo.git -> repo). */
+	public static repoNameFromUrl(url: string): string {
+		return url.trim().replace(/[\\/]+$/, '').replace(/\.git$/, '').split(/[\\/:]/).pop() || 'repository';
+	}
+
+	/**
+	 * A quick snapshot of a repository for the repository hub: current branch, ahead/behind,
+	 * number of changed files and the latest commit. Never rejects - `error` is set instead
+	 * (e.g. the folder no longer exists).
+	 */
+	public async getRepoSummary(repo: string): Promise<RepoSummary> {
+		const summary: RepoSummary = { branch: null, detached: false, ahead: 0, behind: 0, changes: 0, lastCommit: null, remoteUrl: null, error: null };
+		if (!fs.existsSync(repo)) {
+			summary.error = 'Folder not found';
+			return summary;
+		}
+		try {
+			const lines = (await this.spawnGit(['status', '--porcelain=v1', '-b'], repo, (out) => out.split('\n').filter((l) => l !== '')));
+			for (const line of lines) {
+				if (line.startsWith('## ')) {
+					const head = line.substring(3);
+					if (head.startsWith('HEAD (no branch)')) {
+						summary.detached = true;
+					} else if (head.startsWith('No commits yet on ')) {
+						summary.branch = head.substring('No commits yet on '.length);
+					} else {
+						summary.branch = head.split('...')[0].split(' ')[0];
+						const ahead = /ahead (\d+)/.exec(head), behind = /behind (\d+)/.exec(head);
+						if (ahead) summary.ahead = parseInt(ahead[1], 10);
+						if (behind) summary.behind = parseInt(behind[1], 10);
+					}
+				} else {
+					summary.changes++;
+				}
+			}
+		} catch (e) {
+			summary.error = String(e);
+			return summary;
+		}
+		try {
+			const out = await this.spawnGit(['log', '-1', '--format=%ct%x00%an%x00%s'], repo, (o) => o.trim());
+			const parts = out.split('\0');
+			if (parts.length === 3) summary.lastCommit = { date: parseInt(parts[0], 10), author: parts[1], subject: parts[2] };
+		} catch (_) { /* no commits yet */ }
+		try {
+			summary.remoteUrl = (await this.spawnGit(['config', '--get', 'remote.origin.url'], repo, (o) => o.trim())) || null;
+		} catch (_) { /* no origin */ }
+		return summary;
 	}
 
 	/**

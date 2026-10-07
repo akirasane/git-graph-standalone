@@ -130,28 +130,16 @@ export class RepoManager extends Disposable {
 	}
 
 	private async startupTasks() {
-		this.removeReposNotInRootFolders();
+		// Repositories the user added stay in the list until they remove them - even if their folder is
+		// temporarily unavailable (the repository hub shows those as "Folder not found").
 		if (this.updateReposRootFolderIndex()) {
 			this.store.saveRepos(this.repos);
 		}
-		if (!await this.checkReposExist()) {
-			this.sendRepos();
-		}
+		this.sendRepos();
 		this.checkReposForNewConfig();
 		await this.checkReposForNewSubmodules();
 		await this.searchWorkspaceForRepos();
 		this.startWatchingFolders();
-	}
-
-	private removeReposNotInRootFolders() {
-		const rootsExact = this.rootFolders, rootsFolder = this.rootFolders.map(pathWithTrailingSlash);
-		const repoPaths = Object.keys(this.repos);
-		for (let i = 0; i < repoPaths.length; i++) {
-			const repoPathFolder = pathWithTrailingSlash(repoPaths[i]);
-			if (rootsExact.indexOf(repoPaths[i]) === -1 && !rootsFolder.find(root => repoPaths[i].startsWith(root)) && !rootsExact.find(root => root.startsWith(repoPathFolder))) {
-				this.removeRepo(repoPaths[i]);
-			}
-		}
 	}
 
 	/**

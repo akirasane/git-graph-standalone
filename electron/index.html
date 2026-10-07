@@ -4,7 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" type="text/css" href="../media/out.min.css">
-	<title>Git Graph (Standalone - Phase 0)</title>
+	<title>Git Graph</title>
 	<style>
 		/*
 		 * Theme: "Terminal Velocity" (stitch_git_graph_standalone_theming_fix/DESIGN.md).
@@ -76,15 +76,6 @@
 		::-webkit-scrollbar-thumb{ background:#333333; }
 		::-webkit-scrollbar-thumb:hover{ background:#444444; }
 
-		#addRepoBtn{
-			position:absolute; left:8px; top:50%; transform:translateY(-50%);
-			height:22px; padding:0 10px; line-height:22px; font-size:12px;
-			background:var(--gg-menu-background); color:var(--gg-menu-foreground);
-			border:1px solid transparent; border-radius:0; cursor:pointer;
-		}
-		#addRepoBtn:hover{ background:#4a4a4a; }
-		#addRepoBtn:active{ border-color:var(--gg-focusBorder); }
-		#controls{ padding-left:110px; }
 
 		/*
 		 * Right-side Commit Details panel (GitFlow Visualizer / "Terminal Velocity" mockup).
@@ -278,7 +269,6 @@
 <body>
 	<div id="view" tabindex="-1">
 		<div id="controls">
-			<button id="addRepoBtn" type="button" title="Add a Repository (select a folder containing a Git repo)">+ Add Repository</button>
 			<span id="repoControl"><span class="unselectable">Repo: </span><div id="repoDropdown" class="dropdown"></div></span>
 			<span id="branchControl"><span class="unselectable">Branches: </span><div id="branchDropdown" class="dropdown"></div></span>
 			<label id="showRemoteBranchesControl"><input type="checkbox" id="showRemoteBranchesCheckbox" tabindex="-1"><span class="customCheckbox"></span>Show Remote Branches</label>
@@ -296,6 +286,7 @@
 	</div>
 	<div id="scrollShadow"></div>
 	<div id="sidebar">
+		<button type="button" id="sbHome" title="Back to all repositories (Ctrl+Shift+H)"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg><span>Repositories</span></button>
 		<div id="sbTop"><input type="text" id="sbFilter" placeholder="Filter branches, tags, stashes"><button type="button" id="sbFetchBtn" class="wcSmallBtn" title="Fetch all remotes">Fetch</button></div>
 		<div id="sbConflicts" style="display:none"></div>
 		<div id="sbScroll"><div id="sbBody"></div></div>
@@ -423,8 +414,8 @@
 	</script>
 	<script src="../media/out.min.js"></script>
 	<script>
-		document.getElementById('addRepoBtn').addEventListener('click', function () {
-			window.electronAPI.addRepository();
+		document.getElementById('sbHome').addEventListener('click', function () {
+			window.electronAPI.goHome();
 		});
 	</script>
 	<script src="panel.js"></script>

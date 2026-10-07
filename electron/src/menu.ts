@@ -23,12 +23,19 @@ export function buildMenu(
 	avatarManager: AvatarManager,
 	store: Store,
 	repoManager: RepoManager,
-	getGitExecutable: () => GitExecutable | null
+	getGitExecutable: () => GitExecutable | null,
+	showHome: () => void
 ): Menu {
 	const template: Electron.MenuItemConstructorOptions[] = [
 		{
 			label: 'Git Graph',
 			submenu: [
+				{
+					label: 'Repositories',
+					accelerator: 'CmdOrCtrl+Shift+H',
+					click: () => showHome()
+				},
+				{ type: 'separator' },
 				{
 					label: 'Add Repository...',
 					click: () => addRepository(win, repoManager, getGitExecutable)

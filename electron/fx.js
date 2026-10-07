@@ -7,7 +7,7 @@
 
 	// Spotlight: a soft glow follows the pointer inside rows/buttons. Class is attached lazily on
 	// first hover, so re-rendered lists (innerHTML) need no re-wiring.
-	var SPOT = '.sbRow, .wcFileRow, .wcStashRow, .wcSmallBtn, .cfFile, .cfHunk, .dropdownOption, .contextMenuItem';
+	var SPOT = '.card, .heroCard, .sbRow, .wcFileRow, .wcStashRow, .wcSmallBtn, .cfFile, .cfHunk, .dropdownOption, .contextMenuItem';
 	var frame = null;
 	if (!reduce) {
 		document.addEventListener('pointermove', function (e) {

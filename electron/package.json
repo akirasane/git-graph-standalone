@@ -1,6 +1,6 @@
 {
 	"name": "git-graph-standalone",
-	"version": "0.0.1",
+	"version": "0.0.3",
 	"private": true,
 	"description": "Standalone Electron shell for Git Graph",
 	"author": {

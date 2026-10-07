@@ -1,6 +1,6 @@
 {
 	"name": "git-graph-standalone",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"private": true,
 	"description": "Standalone Electron shell for Git Graph",
 	"author": {
@@ -56,6 +56,7 @@
 			"owner": "akirasane",
 			"repo": "git-graph-standalone"
 		},
+		"artifactName": "Git-Graph-Setup-${version}.${ext}",
 		"win": {
 			"target": "nsis",
 			"icon": "icon-256.png",

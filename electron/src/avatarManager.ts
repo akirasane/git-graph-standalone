@@ -228,7 +228,7 @@ export class AvatarManager extends Disposable {
 
 		https.get({
 			hostname: 'api.github.com', path: '/repos/' + owner + '/' + repo + '/commits/' + avatarRequest.commits[commitIndex],
-			headers: { 'User-Agent': 'vscode-git-graph' },
+			headers: { 'User-Agent': 'git-graph-standalone' },
 			agent: false, timeout: 15000
 		}, (res) => {
 			let respBody = '';
@@ -298,7 +298,7 @@ export class AvatarManager extends Disposable {
 
 		https.get({
 			hostname: 'gitlab.com', path: '/api/v4/users?search=' + avatarRequest.email,
-			headers: { 'User-Agent': 'vscode-git-graph', 'Private-Token': 'w87U_3gAxWWaPtFgCcus' }, // Token only has read access
+			headers: { 'User-Agent': 'git-graph-standalone', 'Private-Token': 'w87U_3gAxWWaPtFgCcus' }, // Token only has read access
 			agent: false, timeout: 15000
 		}, (res) => {
 			let respBody = '';
@@ -379,7 +379,7 @@ export class AvatarManager extends Disposable {
 
 			https.get({
 				hostname: imgUrl.hostname, path: imgUrl.path,
-				headers: { 'User-Agent': 'vscode-git-graph' },
+				headers: { 'User-Agent': 'git-graph-standalone' },
 				agent: false, timeout: 15000
 			}, (res) => {
 				let imageBufferArray: Buffer[] = [];

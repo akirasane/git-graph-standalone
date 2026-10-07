@@ -1,6 +1,6 @@
 import { IDisposable } from './disposable';
 
-/** Ported from src/utils/event.ts, with `vscode.Disposable` replaced by the local `IDisposable`. */
+/** Minimal typed event emitter. */
 
 type EventListener<T> = (event: T) => void;
 

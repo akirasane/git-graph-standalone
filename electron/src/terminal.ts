@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import * as path from 'path';
 
 /**
- * Opens a native OS terminal at `cwd`, replacing VSCode's `vscode.window.createTerminal`.
+ * Opens a native OS terminal at `cwd`.
  * Prepends the Git executable's directory to PATH (matching the original's behaviour) and,
  * if `command` is provided, runs `git <command>` in the new terminal.
  */

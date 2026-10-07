@@ -1,4 +1,4 @@
-/** Ported from src/utils/disposable.ts, with `vscode.Disposable` replaced by a local plain interface. */
+/** Base class for objects that own disposable resources. */
 export interface IDisposable {
 	dispose(): void;
 }

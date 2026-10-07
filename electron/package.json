@@ -10,6 +10,7 @@
 	"main": "dist/main.js",
 	"scripts": {
 		"compile": "tsc -p . && node -e \"require('fs').cpSync('src/askpass/askpass.sh','dist/askpass/askpass.sh');require('fs').cpSync('src/askpass/askpass-empty.sh','dist/askpass/askpass-empty.sh')\"",
+		"launch": "electron .",
 		"start": "npm run compile && electron .",
 		"dist": "npm run compile && electron-builder"
 	},

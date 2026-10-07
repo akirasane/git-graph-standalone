@@ -551,7 +551,7 @@ class Graph {
 			muted[i] = false;
 		}
 
-		// Mute any merge commits if the Extension Setting is enabled
+		// Mute any merge commits if the setting is enabled
 		if (this.muteConfig.mergeCommits) {
 			for (let i = 0; i < this.commits.length; i++) {
 				if (this.vertices[i].isMerge() && this.commits[i].stash === null) {
@@ -561,7 +561,7 @@ class Graph {
 			}
 		}
 
-		// Mute any commits that are not ancestors of the commit head if the Extension Setting is enabled, and the head commit is in the graph
+		// Mute any commits that are not ancestors of the commit head if the setting is enabled, and the head commit is in the graph
 		if (this.muteConfig.commitsNotAncestorsOfHead && currentHash !== null && typeof this.commitLookup[currentHash] === 'number') {
 			let ancestor: boolean[] = [];
 			for (let i = 0; i < this.commits.length; i++) {

@@ -4,9 +4,7 @@ import { getPathFromStr } from './utils';
 const FILE_CHANGE_REGEX = /(^\.git\/(config|index|HEAD|refs\/stash|refs\/heads\/.*|refs\/remotes\/.*|refs\/tags\/.*)$)|(^(?!\.git).*$)|(^\.git[^\/]+$)/;
 
 /**
- * Ported from src/repoFileWatcher.ts. `vscode.workspace.createFileSystemWatcher` is replaced
- * by `chokidar`, which (unlike VSCode's watcher) emits plain path strings directly instead of
- * `vscode.Uri` objects, and needs no `getPathFromUri` conversion step.
+ * Watches the active repository with `chokidar`.
  */
 export class RepoFileWatcher {
 	private readonly repoChangeCallback: () => void;

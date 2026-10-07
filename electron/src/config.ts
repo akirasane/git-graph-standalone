@@ -29,10 +29,8 @@ import {
 } from './types';
 
 /**
- * Ported from src/config.ts. Same getter shape/keys as the VSCode Extension Settings, backed by
- * a JSON ConfigStore instead of `vscode.workspace.getConfiguration('git-graph')`. The legacy
- * renamed-setting fallback (`getRenamedExtensionSetting`) is dropped - there's no VSCode settings
- * history to migrate in a standalone app, so each getter just reads its current section name.
+ * Typed getters over the JSON ConfigStore (config.json in the app data folder).
+ *  * history to migrate in a standalone app, so each getter just reads its current section name.
  */
 export class Config {
 	private readonly config: ConfigStore;
@@ -246,7 +244,7 @@ export class Config {
 		return !!this.config.get('markdown', true);
 	}
 
-	/** VSCode's editor-group placement setting for opened diffs; kept as a raw string hint for Phase 5's diff viewer. */
+	/** Editor-group placement hint for opened diffs (raw string, currently informational). */
 	get openNewTabEditorGroup(): string {
 		return this.config.get<string>('openNewTabEditorGroup', 'Active');
 	}
@@ -391,7 +389,7 @@ export class Config {
 			: TabIconColourTheme.Colour;
 	}
 
-	/** Optional pinned Git executable path(s), analogous to VSCode's `git.path` setting. */
+	/** Optional pinned Git executable path(s), for when auto-detection finds the wrong Git. */
 	get gitPaths(): string[] {
 		const configValue = this.config.get<string | string[] | null>('git.path', null);
 		if (configValue === null) {

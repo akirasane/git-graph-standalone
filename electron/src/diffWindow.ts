@@ -7,7 +7,7 @@ import { ErrorInfo, GitFileStatus } from './types';
 import { UNCOMMITTED, abbrevCommit, doesFileExist, getNonce } from './utils';
 
 /**
- * Phase 5: replaces VSCode's native diff editor (`vscode.commands.executeCommand('vscode.diff', ...)`,
+ * Standalone diff viewer window (
  * fed by diffDocProvider.ts's `TextDocumentContentProvider`) with a Monaco diff editor embedded in
  * its own BrowserWindow. `dataSource.getCommitFile` (unchanged from the original) still supplies
  * historical file content; the working-tree side reads straight from disk.

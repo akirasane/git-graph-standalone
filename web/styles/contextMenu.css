@@ -1,19 +1,15 @@
 .contextMenu{
 	display:block;
 	position:absolute;
-	background-color:var(--vscode-menu-background);
-	box-shadow:0 1px 4px 1px var(--vscode-widget-shadow);
-	color:var(--vscode-menu-foreground);
+	background-color:var(--gg-menu-background);
+	box-shadow:0 1px 4px 1px var(--gg-widget-shadow);
+	color:var(--gg-menu-foreground);
 	list-style-type:none;
 	margin:0;
 	padding:4px 0;
 	z-index:10;
 	-webkit-user-select:none;
 	user-select:none;
-}
-body.vscode-high-contrast .contextMenu{
-	outline:1px solid var(--vscode-menu-border, transparent);
-	outline-offset:-1px;
 }
 
 .contextMenu li{
@@ -27,17 +23,13 @@ body.vscode-high-contrast .contextMenu{
 }
 
 .contextMenu li.contextMenuItem:hover{
-	background-color:var(--vscode-menu-selectionBackground, var(--vscode-menu-background));
-	color:var(--vscode-menu-selectionForeground, var(--vscode-menu-foreground));
-}
-body.vscode-high-contrast .contextMenu li.contextMenuItem:hover{
-	outline:1px solid var(--vscode-menu-selectionBorder, transparent);
-	outline-offset:-2px;
+	background-color:var(--gg-menu-selectionBackground, var(--gg-menu-background));
+	color:var(--gg-menu-selectionForeground, var(--gg-menu-foreground));
 }
 
 .contextMenu li.contextMenuDivider{
 	margin:4px 10px;
-	border-top:1px solid var(--vscode-menu-separatorBackground);
+	border-top:1px solid var(--gg-menu-separatorBackground);
 	opacity:0.5;
 }
 
@@ -58,11 +50,11 @@ body.vscode-high-contrast .contextMenu li.contextMenuItem:hover{
 }
 
 .contextMenu.checked li.contextMenuItem .contextMenuItemCheck svg{
-	fill:var(--vscode-menu-foreground);
+	fill:var(--gg-menu-foreground);
 	opacity:0.6;
 }
 
 .contextMenu.checked li.contextMenuItem:hover .contextMenuItemCheck svg{
-	fill:var(--vscode-menu-selectionForeground);
+	fill:var(--gg-menu-selectionForeground);
 	opacity:0.8;
 }

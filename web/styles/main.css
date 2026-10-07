@@ -24,7 +24,7 @@ body #view{
 	left:0;
 	right:0;
 	bottom:0;
-	background-color:var(--vscode-editor-background);
+	background-color:var(--gg-editor-background);
 	overflow-x:hidden;
 	overflow-y:auto;
 }
@@ -33,10 +33,10 @@ body #view:focus{
 }
 
 body.selection-background-color-exists ::-moz-selection{
-	background-color: var(--vscode-selection-background);
+	background-color: var(--gg-selection-background);
 }
 body.selection-background-color-exists ::selection{
-	background-color: var(--vscode-selection-background);
+	background-color: var(--gg-selection-background);
 }
 
 code{
@@ -75,7 +75,7 @@ code{
 	left:0;
 	right:0;
 	height:0;
-	box-shadow:0 -6px 6px 6px var(--vscode-scrollbar-shadow);
+	box-shadow:0 -6px 6px 6px var(--gg-scrollbar-shadow);
 	z-index:20;
 }
 
@@ -94,11 +94,11 @@ code{
 	pointer-events:all;
 }
 #commitGraph circle.current{
-	fill:var(--vscode-editor-background);
+	fill:var(--gg-editor-background);
 	stroke-width:2;
 }
 #commitGraph circle:not(.current){
-	stroke:var(--vscode-editor-background);
+	stroke:var(--gg-editor-background);
 	stroke-width:1;
 	stroke-opacity:0.75;
 }
@@ -109,7 +109,7 @@ code{
 }
 #commitGraph path.shadow{
 	fill:none;
-	stroke:var(--vscode-editor-background);
+	stroke:var(--gg-editor-background);
 	stroke-opacity:0.75;
 	stroke-width:4;
 }
@@ -137,11 +137,11 @@ code{
 	position:relative;
 	left:23px;
 	top:0;
-	background-color:var(--vscode-menu-background);
+	background-color:var(--gg-menu-background);
 	border-width:2px;
 	border-style:solid;
 	border-radius:5px;
-	color:var(--vscode-menu-foreground);
+	color:var(--gg-menu-foreground);
 	font-size:13px;
 	line-height:22px;
 	white-space:normal;
@@ -152,7 +152,7 @@ code{
 	left:23px;
 	top:0;
 	border-radius:5px;
-	box-shadow:0 0 30px 5px var(--vscode-widget-shadow);
+	box-shadow:0 0 30px 5px var(--gg-widget-shadow);
 	z-index:3;
 }
 
@@ -373,7 +373,7 @@ code{
 	height:20px;
 	left:2px;
 	top:2px;
-	fill:var(--vscode-editor-foreground);
+	fill:var(--gg-editor-foreground);
 	fill-opacity:0.6;
 }
 .cdvControlBtn:hover svg, .cdvControlBtn.active svg{
@@ -501,7 +501,7 @@ code{
 	margin-top:2px;
 	margin-right:8px;
 	vertical-align:top;
-	fill:var(--vscode-editor-foreground);
+	fill:var(--gg-editor-foreground);
 	animation:loadingIconAnimation 2s linear infinite;
 }
 
@@ -574,7 +574,7 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon, .fileTreeFileAction svg,
 	position:absolute;
 	top:2.5px;
 	height:13px !important;
-	fill:var(--vscode-editor-foreground);
+	fill:var(--gg-editor-foreground);
 	fill-opacity:0.6;
 }
 .fileTreeFileAction.copyGitFile svg{
@@ -596,13 +596,13 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	cursor:pointer;
 }
 .fileTreeFile .gitFileName{
-	color:var(--vscode-gitDecoration-modifiedResourceForeground);
+	color:var(--gg-gitDecoration-modifiedResourceForeground);
 }
 .fileTreeFile .gitFileName.A, .fileTreeFile .gitFileName.U{
-	color:var(--vscode-gitDecoration-addedResourceForeground);
+	color:var(--gg-gitDecoration-addedResourceForeground);
 }
 .fileTreeFile .gitFileName.D{
-	color:var(--vscode-gitDecoration-deletedResourceForeground);
+	color:var(--gg-gitDecoration-deletedResourceForeground);
 }
 .fileTreeFile.gitDiffPossible{
 	cursor:pointer;
@@ -618,10 +618,10 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 	cursor:help;
 }
 .fileTreeFileAdd{
-	color:var(--vscode-gitDecoration-addedResourceForeground);
+	color:var(--gg-gitDecoration-addedResourceForeground);
 }
 .fileTreeFileDel{
-	color:var(--vscode-gitDecoration-deletedResourceForeground);
+	color:var(--gg-gitDecoration-deletedResourceForeground);
 }
 
 .fileTreeFolder.pendingReview .gitFolderName, .fileTreeFile.pendingReview .gitFileName{
@@ -664,11 +664,8 @@ svg.openFolderIcon, svg.closedFolderIcon, svg.fileIcon{
 
 #commitTable tr.commit.findCurrentCommit {
 	background-image:linear-gradient(var(--git-graph-findMatchCommit), var(--git-graph-findMatchCommit));
-	outline:1px solid var(--vscode-editor-findMatchHighlightBorder, transparent);
+	outline:1px solid var(--gg-editor-findMatchHighlightBorder, transparent);
 	outline-offset:-1px;
-}
-body.vscode-high-contrast #commitTable tr.commit.findCurrentCommit{
-	outline-style:dotted;
 }
 
 #commitTable tr.commit.mute.commitDetailsOpen td.text,
@@ -715,7 +712,7 @@ body.vscode-high-contrast #commitTable tr.commit.findCurrentCommit{
 }
 .gitRef > svg{
 	background-color:var(--git-graph-color);
-	fill:var(--vscode-editor-background);
+	fill:var(--gg-editor-background);
 	width:14px;
 	height:14px;
 	padding:2px;
@@ -758,7 +755,7 @@ body.tagLabelsRightAligned .gitRef.tag{
 }
 #loadingHeader svg{
 	display:inline;
-	fill:var(--vscode-editor-foreground);
+	fill:var(--gg-editor-foreground);
 	margin-right:10px;
 	vertical-align:top;
 	animation:loadingIconAnimation 2s linear infinite;
@@ -843,9 +840,9 @@ body.tagLabelsRightAligned .gitRef.tag{
 }
 #findBtn svg, #terminalBtn svg, #settingsBtn svg, #fetchBtn svg, #refreshBtn svg{
 	position:absolute;
-	fill:var(--vscode-editor-foreground);
+	fill:var(--gg-editor-foreground);
 	opacity:0.8;
-	stroke:var(--vscode-editor-foreground);
+	stroke:var(--gg-editor-foreground);
 	stroke-opacity:0.5;
 	stroke-width:0;
 }
@@ -931,15 +928,15 @@ body.tagLabelsRightAligned .gitRef.tag{
 }
 
 a, span.internalUrl{
-	color:var(--vscode-textLink-foreground);
+	color:var(--gg-textLink-foreground);
 	cursor:pointer;
 	text-decoration:underline;
 }
 a:hover, span.internalUrl:hover {
-	color:var(--vscode-textLink-activeForeground);
+	color:var(--gg-textLink-activeForeground);
 }
 a:focus, span.internalUrl:focus{
-	outline:1px solid var(--vscode-focusBorder);
+	outline:1px solid var(--gg-focusBorder);
 	outline-offset:-1px;
 	-webkit-user-select:none;
 	user-select:none;
@@ -988,7 +985,7 @@ label > input[type=checkbox]:checked ~ .customCheckbox:after{
 	top:2px;
 	width:3px;
 	height:7px;
-	border:solid var(--vscode-editor-foreground);
+	border:solid var(--gg-editor-foreground);
 	border-width:0 2px 2px 0;
 	transform:rotate(45deg);
 }
@@ -1010,7 +1007,7 @@ label > input[type=radio]:checked ~ .customRadio:after{
 	top:4px;
 	width:5px;
 	height:5px;
-	background-color:var(--vscode-editor-foreground);
+	background-color:var(--gg-editor-foreground);
 	border-radius:2.5px;
 }
 

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 /**
- * Shims VSCode's webview `acquireVsCodeApi()` global so the existing
+ * Exposes an `acquireHostApi()` global (postMessage/getState/setState) so the
  * media/out.min.js bundle (compiled from web/*.ts) runs unmodified in Electron.
  * postMessage -> ipcRenderer.send, and inbound IPC messages are redispatched
  * as window 'message' events (what web/main.ts's listener expects).
@@ -9,7 +9,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 let state: unknown = null;
 
-contextBridge.exposeInMainWorld('acquireVsCodeApi', () => {
+contextBridge.exposeInMainWorld('acquireHostApi', () => {
 	return {
 		getState: () => state,
 		setState: (newState: unknown) => {

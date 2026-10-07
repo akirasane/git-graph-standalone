@@ -17,17 +17,10 @@ export interface RepoChangeEvent {
 }
 
 /**
- * Ported from src/repoManager.ts. VSCode's `vscode.workspace.workspaceFolders` (implicitly
- * managed by the editor) is replaced by an explicit, user-managed `rootFolders` list persisted
- * in the Store - the standalone app has no notion of an open "workspace", so root folders are
- * added/removed one at a time (via `addRootFolder`/`removeRootFolder`, wired to an "Add
- * Repository/Folder" UI action in a later phase) instead of following editor window state.
- *
- * `vscode.workspace.createFileSystemWatcher` is replaced by `chokidar`. The original's two
- * separate watcher sets (per-workspace-folder `folderWatchers`, plus one workspace-wide
- * `configWatcher` glob for `.vscode/vscode-git-graph.json`) are merged into a single chokidar
- * instance per root folder, whose event handler does both jobs - there's no need to run two
- * overlapping recursive watchers over the same directory tree.
+ * Tracks the repositories known to the app. Repositories are found by scanning an explicit,
+ * user-managed `rootFolders` list persisted in the Store (added/removed one at a time via
+ * `addRootFolder`/`removeRootFolder`). One `chokidar` watcher per root folder both detects repos
+ * appearing/disappearing and watches each repo's `.git-graph.json` configuration file.
  */
 export class RepoManager extends Disposable {
 	private readonly dataSource: RepoDataSource;
@@ -469,7 +462,7 @@ export class RepoManager extends Disposable {
 	}
 
 	private isRepoConfigFile(filePath: string) {
-		return filePath.endsWith('/.vscode/vscode-git-graph.json');
+		return filePath.endsWith('/.git-graph.json');
 	}
 
 	private async processOnWatcherCreateEvent(p: string) {
@@ -517,7 +510,7 @@ export class RepoManager extends Disposable {
 						return true;
 					}
 				} else {
-					showErrorMessage('The value for "' + validationError + '" in the configuration file "' + getPathFromStr(path.join(repo, '.vscode', 'vscode-git-graph.json')) + '" is invalid.');
+					showErrorMessage('The value for "' + validationError + '" in the configuration file "' + getPathFromStr(path.join(repo, '.git-graph.json')) + '" is invalid.');
 				}
 			}
 		} catch (_) { }
@@ -609,7 +602,7 @@ export namespace ExternalRepoConfig {
 
 function readExternalConfigFile(repo: string) {
 	return new Promise<Readonly<ExternalRepoConfig.File> | null>((resolve) => {
-		fs.readFile(path.join(repo, '.vscode', 'vscode-git-graph.json'), (err, data) => {
+		fs.readFile(path.join(repo, '.git-graph.json'), (err, data) => {
 			if (err) {
 				resolve(null);
 			} else {
@@ -626,21 +619,14 @@ function readExternalConfigFile(repo: string) {
 
 function writeExternalConfigFile(repo: string, file: ExternalRepoConfig.File) {
 	return new Promise<string>((resolve, reject) => {
-		const vscodePath = path.join(repo, '.vscode');
-		fs.mkdir(vscodePath, (err) => {
-			if (!err || err.code === 'EEXIST') {
-				const configPath = path.join(vscodePath, 'vscode-git-graph.json');
-				fs.writeFile(configPath, JSON.stringify(file, null, 4), (err) => {
-					if (err) {
-						reject('Failed to write the Git Graph Repository Configuration File to "' + getPathFromStr(configPath) + '".');
-					} else {
-						resolve('Successfully exported the Git Graph Repository Configuration to "' + getPathFromStr(configPath) + '".');
-					}
-				});
-			} else {
-				reject('An unexpected error occurred while checking if the "' + getPathFromStr(vscodePath) + '" directory exists. This directory is used to store the Git Graph Repository Configuration file.');
-			}
-		});
+		const configPath = path.join(repo, '.git-graph.json');
+			fs.writeFile(configPath, JSON.stringify(file, null, 4), (err) => {
+				if (err) {
+					reject('Failed to write the Git Graph Repository Configuration File to "' + getPathFromStr(configPath) + '".');
+				} else {
+					resolve('Successfully exported the Git Graph Repository Configuration to "' + getPathFromStr(configPath) + '".');
+				}
+			});
 	});
 }
 

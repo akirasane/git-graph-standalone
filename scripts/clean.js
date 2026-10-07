@@ -19,4 +19,3 @@ function deleteFolderAndFiles(directory) {
 }
 
 deleteFolderAndFiles('./media');
-deleteFolderAndFiles('./out');

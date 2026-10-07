@@ -3,9 +3,9 @@ import * as path from 'path';
 
 /**
  * Loads & saves the standalone app's JSON configuration file, replacing
- * VSCode's `vscode.workspace.getConfiguration('git-graph')` in the ported Config class.
+ * the app configuration, backing the Config class.
  * Keys are addressed with dot-paths (e.g. "commitDetailsView.autoCenter"),
- * mirroring the section names used by the original VSCode Extension Settings.
+ * using the "git-graph.*" setting names.
  */
 export class ConfigStore {
 	private readonly filePath: string;

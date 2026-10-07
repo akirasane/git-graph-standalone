@@ -5,7 +5,7 @@
 (function () {
 	'use strict';
 
-	var api = window.acquireVsCodeApi();
+	var api = window.acquireHostApi();
 	var state = { operation: null, files: [] };
 	var editor = null; // { repo, filePath, eol, segments, manual }
 	var els = {};

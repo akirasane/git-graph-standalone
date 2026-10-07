@@ -3,7 +3,7 @@ import * as path from 'path';
 import { BooleanOverride, CodeReview, ErrorInfo, FileViewType, GitGraphViewGlobalState, GitGraphViewWorkspaceState, GitRepoSet, GitRepoState, RepoCommitOrdering } from './types';
 
 /**
- * Ported from src/extensionState.ts. VSCode's `context.globalState`/`context.workspaceState`
+ * Persistent app state (global + per-repo view state).
  * (both key/value Mementos) are replaced by a single JSON file - there's no separate
  * global-vs-workspace scope in a standalone app, so the global/workspace split collapses
  * into one flat store.
@@ -71,7 +71,7 @@ const DEFAULT_GIT_GRAPH_VIEW_WORKSPACE_STATE: GitGraphViewWorkspaceState = {
 
 /**
  * Manages the Git Graph standalone app's persisted state (known repos, code reviews, avatar
- * cache, view state), backed by a single JSON file instead of VSCode's global/workspace Mementos.
+ * cache, view state), backed by a single JSON file.
  */
 export class Store {
 	private readonly filePath: string;
@@ -195,7 +195,7 @@ export class Store {
 	}
 
 
-	/* Root Folders (standalone replacement for VSCode's workspace folders) */
+	/* Root Folders (folders scanned for repositories) */
 
 	public getRootFolders(): string[] {
 		return this.get<string[]>(ROOT_FOLDERS, []);

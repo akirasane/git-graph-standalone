@@ -1,7 +1,6 @@
 /*---------------------------------------------------------------------------------------------
- *  Ported from src/askpass/askpassManager.ts (itself based on VSCode's Git Extension askpass
- *  implementation, see that file for the original attribution/license).
- *  The only VSCode dependency was a single `vscode.window.showInputBox` call, replaced here by
+ *  
+ *  Credential prompts are shown with
  *  a small modal BrowserWindow with a plain HTML form (see `promptForCredentials` below).
  *--------------------------------------------------------------------------------------------*/
 
@@ -16,9 +15,9 @@ import { Disposable, toDisposable } from '../utils/disposable';
 export interface AskpassEnvironment {
 	GIT_ASKPASS: string;
 	ELECTRON_RUN_AS_NODE?: string;
-	VSCODE_GIT_GRAPH_ASKPASS_NODE?: string;
-	VSCODE_GIT_GRAPH_ASKPASS_MAIN?: string;
-	VSCODE_GIT_GRAPH_ASKPASS_HANDLE?: string;
+	GIT_GRAPH_ASKPASS_NODE?: string;
+	GIT_GRAPH_ASKPASS_MAIN?: string;
+	GIT_GRAPH_ASKPASS_HANDLE?: string;
 }
 
 export interface AskpassRequest {
@@ -77,9 +76,9 @@ export class AskpassManager extends Disposable {
 			? {
 				ELECTRON_RUN_AS_NODE: '1',
 				GIT_ASKPASS: path.join(__dirname, 'askpass.sh'),
-				VSCODE_GIT_GRAPH_ASKPASS_NODE: process.execPath,
-				VSCODE_GIT_GRAPH_ASKPASS_MAIN: path.join(__dirname, 'askpassMain.js'),
-				VSCODE_GIT_GRAPH_ASKPASS_HANDLE: this.ipcHandlePath
+				GIT_GRAPH_ASKPASS_NODE: process.execPath,
+				GIT_GRAPH_ASKPASS_MAIN: path.join(__dirname, 'askpassMain.js'),
+				GIT_GRAPH_ASKPASS_HANDLE: this.ipcHandlePath
 			}
 			: {
 				GIT_ASKPASS: path.join(__dirname, 'askpass-empty.sh')
@@ -99,7 +98,7 @@ function getIPCHandlePath(nonce: string): string {
 
 /**
  * Prompt the user for a credential (username/password) in a small modal window, replacing
- * `vscode.window.showInputBox`. Masks the input when `request` looks like a password prompt.
+ * a small input window. Masks the input when `request` looks like a password prompt.
  */
 function promptForCredentials(host: string, request: string): Promise<string | undefined> {
 	return new Promise((resolve) => {

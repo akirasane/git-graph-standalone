@@ -708,7 +708,7 @@ class GitGraphView {
 			expandedCommit = null;
 		}
 
-		VSCODE_API.setState({
+		HOST_API.setState({
 			currentRepo: this.currentRepo,
 			currentRepoLoading: this.currentRepoLoading,
 			gitRepos: this.gitRepos,
@@ -1954,10 +1954,10 @@ class GitGraphView {
 	}
 
 	private observeWebviewStyleChanges() {
-		let fontFamily = getVSCodeStyle(CSS_PROP_FONT_FAMILY),
-			editorFontFamily = getVSCodeStyle(CSS_PROP_EDITOR_FONT_FAMILY),
-			findMatchColour = getVSCodeStyle(CSS_PROP_FIND_MATCH_HIGHLIGHT_BACKGROUND),
-			selectionBackgroundColor = !!getVSCodeStyle(CSS_PROP_SELECTION_BACKGROUND);
+		let fontFamily = getThemeStyle(CSS_PROP_FONT_FAMILY),
+			editorFontFamily = getThemeStyle(CSS_PROP_EDITOR_FONT_FAMILY),
+			findMatchColour = getThemeStyle(CSS_PROP_FIND_MATCH_HIGHLIGHT_BACKGROUND),
+			selectionBackgroundColor = !!getThemeStyle(CSS_PROP_SELECTION_BACKGROUND);
 
 		const setFlashColour = (colour: string) => {
 			document.body.style.setProperty('--git-graph-flashPrimary', modifyColourOpacity(colour, 0.7));
@@ -1972,10 +1972,10 @@ class GitGraphView {
 		setSelectionBackgroundColorExists();
 
 		(new MutationObserver(() => {
-			let ff = getVSCodeStyle(CSS_PROP_FONT_FAMILY),
-				eff = getVSCodeStyle(CSS_PROP_EDITOR_FONT_FAMILY),
-				fmc = getVSCodeStyle(CSS_PROP_FIND_MATCH_HIGHLIGHT_BACKGROUND),
-				sbc = !!getVSCodeStyle(CSS_PROP_SELECTION_BACKGROUND);
+			let ff = getThemeStyle(CSS_PROP_FONT_FAMILY),
+				eff = getThemeStyle(CSS_PROP_EDITOR_FONT_FAMILY),
+				fmc = getThemeStyle(CSS_PROP_FIND_MATCH_HIGHLIGHT_BACKGROUND),
+				sbc = !!getThemeStyle(CSS_PROP_SELECTION_BACKGROUND);
 
 			if (ff !== fontFamily || eff !== editorFontFamily) {
 				fontFamily = ff;
@@ -3185,7 +3185,7 @@ window.addEventListener('load', () => {
 	const viewElem = document.getElementById('view');
 	if (viewElem === null) return;
 
-	const gitGraph = new GitGraphView(viewElem, VSCODE_API.getState());
+	const gitGraph = new GitGraphView(viewElem, HOST_API.getState());
 	// Exposed read-only for the standalone Electron app's Working Copy panel (electron/index.html),
 	// which runs as a separate script and only ever reads `currentRepo` off this. No-op elsewhere.
 	(<any>window).gitGraph = gitGraph;
@@ -3199,7 +3199,7 @@ window.addEventListener('load', () => {
 				refreshOrDisplayError(msg.error, 'Unable to Add Remote', true);
 				break;
 			case 'addTag':
-				if (msg.pushToRemote !== null && msg.errors.length === 2 && msg.errors[0] === null && isExtensionErrorInfo(msg.errors[1], GG.ErrorInfoExtensionPrefix.PushTagCommitNotOnRemote)) {
+				if (msg.pushToRemote !== null && msg.errors.length === 2 && msg.errors[0] === null && isAppErrorInfo(msg.errors[1], GG.ErrorInfoAppPrefix.PushTagCommitNotOnRemote)) {
 					gitGraph.refresh(false);
 					handleResponsePushTagCommitNotOnRemote(msg.repo, msg.tagName, [msg.pushToRemote], msg.commitHash, msg.errors[1]!);
 				} else {
@@ -3316,7 +3316,7 @@ window.addEventListener('load', () => {
 				refreshOrDisplayError(msg.error, 'Unable to Merge ' + msg.actionOn);
 				break;
 			case 'openExtensionSettings':
-				finishOrDisplayError(msg.error, 'Unable to Open Extension Settings');
+				finishOrDisplayError(msg.error, 'Unable to Open Settings');
 				break;
 			case 'openExternalDirDiff':
 				finishOrDisplayError(msg.error, 'Unable to Open External Directory Diff', true);
@@ -3346,7 +3346,7 @@ window.addEventListener('load', () => {
 				refreshOrDisplayError(msg.error, 'Unable to Stash Uncommitted Changes');
 				break;
 			case 'pushTag':
-				if (msg.errors.length === 1 && isExtensionErrorInfo(msg.errors[0], GG.ErrorInfoExtensionPrefix.PushTagCommitNotOnRemote)) {
+				if (msg.errors.length === 1 && isAppErrorInfo(msg.errors[0], GG.ErrorInfoAppPrefix.PushTagCommitNotOnRemote)) {
 					handleResponsePushTagCommitNotOnRemote(msg.repo, msg.tagName, msg.remotes, msg.commitHash, msg.errors[0]!);
 				} else {
 					refreshAndDisplayErrors(msg.errors, 'Unable to Push Tag');
@@ -3429,7 +3429,7 @@ window.addEventListener('load', () => {
 	}
 
 	function handleResponsePushTagCommitNotOnRemote(repo: string, tagName: string, remotes: string[], commitHash: string, error: string) {
-		const remotesNotContainingCommit: string[] = parseExtensionErrorInfo(error, GG.ErrorInfoExtensionPrefix.PushTagCommitNotOnRemote);
+		const remotesNotContainingCommit: string[] = parseExtensionErrorInfo(error, GG.ErrorInfoAppPrefix.PushTagCommitNotOnRemote);
 
 		const html = '<span class="dialogAlert">' + SVG_ICONS.alert + 'Warning: Commit is not on Remote' + (remotesNotContainingCommit.length > 1 ? 's ' : ' ') + '</span><br>' +
 			'<span class="messageContent">' +
@@ -3505,22 +3505,22 @@ window.addEventListener('load', () => {
 	}
 
 	/**
-	 * Checks whether the given ErrorInfo has an ErrorInfoExtensionPrefix.
+	 * Checks whether the given ErrorInfo has an ErrorInfoAppPrefix.
 	 * @param error The ErrorInfo to check.
-	 * @param prefix The ErrorInfoExtensionPrefix to test.
-	 * @returns TRUE => ErrorInfo has the ErrorInfoExtensionPrefix, FALSE => ErrorInfo doesn\'t have the ErrorInfoExtensionPrefix
+	 * @param prefix The ErrorInfoAppPrefix to test.
+	 * @returns TRUE => ErrorInfo has the ErrorInfoAppPrefix, FALSE => ErrorInfo doesn\'t have the ErrorInfoAppPrefix
 	 */
-	function isExtensionErrorInfo(error: GG.ErrorInfo, prefix: GG.ErrorInfoExtensionPrefix) {
+	function isAppErrorInfo(error: GG.ErrorInfo, prefix: GG.ErrorInfoAppPrefix) {
 		return error !== null && error.startsWith(prefix);
 	}
 
 	/**
-	 * Parses the JSON data from an ErrorInfo prefixed by the provided ErrorInfoExtensionPrefix.
+	 * Parses the JSON data from an ErrorInfo prefixed by the provided ErrorInfoAppPrefix.
 	 * @param error The ErrorInfo to parse.
-	 * @param prefix The ErrorInfoExtensionPrefix used by `error`.
+	 * @param prefix The ErrorInfoAppPrefix used by `error`.
 	 * @returns The parsed JSON data.
 	 */
-	function parseExtensionErrorInfo(error: string, prefix: GG.ErrorInfoExtensionPrefix) {
+	function parseExtensionErrorInfo(error: string, prefix: GG.ErrorInfoAppPrefix) {
 		return JSON.parse(error.substring(prefix.length));
 	}
 });

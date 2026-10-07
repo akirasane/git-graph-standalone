@@ -1,16 +1,16 @@
 // Working Copy panel (stage/unstage/commit + stash tab). Deliberately isolated from
-// media/out.min.js (the verbatim-reused VSCode extension frontend) - see
+// media/out.min.js (the main graph frontend) - see
 // electron/src/dataSource.ts and the plan this was built from for the full rationale.
 //
 // Talks to the same Electron IPC surface the rest of the app uses: a second call to
-// window.acquireVsCodeApi() (electron/src/preload.ts returns a fresh postMessage-only
+// window.acquireHostApi() (electron/src/preload.ts returns a fresh postMessage-only
 // object per call) and its own 'message' listener alongside out.min.js's. This script
 // must NEVER call getState()/setState() on its API object - that state is shared with
 // GitGraphView and calling them would clobber its persisted view state.
 (function () {
 	'use strict';
 
-	var api = window.acquireVsCodeApi();
+	var api = window.acquireHostApi();
 	var stashCache = [];
 	var els = {};
 

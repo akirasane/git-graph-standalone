@@ -1,10 +1,10 @@
-import * as GG from '../out/types'; // Import types from back-end (requires `npm run compile-src`)
+import * as GG from '../electron/dist/types'; // Types shared with the main process (requires `npm run build:main`)
 
 declare global {
 
-	/* Visual Studio Code API Types */
+	/* Host API Types */
 
-	function acquireVsCodeApi(): {
+	function acquireHostApi(): {
 		getState: () => WebViewState | null,
 		postMessage: (message: GG.RequestMessage) => void,
 		setState: (state: WebViewState) => void

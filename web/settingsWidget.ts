@@ -240,7 +240,7 @@ class SettingsWidget {
 			}
 
 			html += '<div class="settingsSection"><h3>Git Graph Configuration</h3><div class="settingsSectionButtons">' +
-				'<div id="openExtensionSettings">' + SVG_ICONS.gear + 'Open Git Graph Extension Settings</div><br/>' +
+				'<div id="openExtensionSettings">' + SVG_ICONS.gear + 'Open Git Graph Settings</div><br/>' +
 				'<div id="exportRepositoryConfig">' + SVG_ICONS.package + 'Export Repository Configuration</div>' +
 				'</div></div>';
 
@@ -667,7 +667,7 @@ class SettingsWidget {
 			{
 				type: DialogInputType.Select, name: 'Provider',
 				options: providerOptions, default: defaultProvider,
-				info: 'In addition to the built-in publicly hosted Pull Request providers, custom providers can be configured using the Extension Setting "git-graph.customPullRequestProviders" (e.g. for use with privately hosted Pull Request providers).'
+				info: 'In addition to the built-in publicly hosted Pull Request providers, custom providers can be configured using the setting "git-graph.customPullRequestProviders" (e.g. for use with privately hosted Pull Request providers).'
 			},
 			{
 				type: DialogInputType.Select, name: 'Source Remote',

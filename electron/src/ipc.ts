@@ -12,12 +12,12 @@ import {
 } from './utils';
 
 /**
- * Ported from src/gitGraphView.ts's `respondToMessage` (the ~60-command switch) and
+ * 's `respondToMessage` (the ~60-command switch) and
  * `respondLoadRepos`. The HTML-rendering half of gitGraphView.ts (`getHtmlForWebview`) stays out
- * of this file - main.ts/index.html own that, since there's no VSCode WebviewPanel to regenerate
+ * of this file - main.ts/index.html own that,
  * HTML into here; the renderer is a normal Electron BrowserWindow loaded once.
  *
- * Message commands that depended on VSCode-only UI (viewDiff, openFile, openTerminal, viewScm,
+ * Message commands that need native UI (viewDiff, openFile, openTerminal, viewScm,
  * clipboard, external URLs, extension settings) call into utils.ts's ported equivalents - some
  * are real Electron implementations already (clipboard, shell.openExternal/openPath), others are
  * still Phase 5/6 stubs that return a "not yet implemented" ErrorInfo instead of throwing.

@@ -1,8 +1,8 @@
 .dialog{
 	display:block;
 	position:fixed;
-	background-color:var(--vscode-menu-background);
-	color:var(--vscode-menu-foreground);
+	background-color:var(--gg-menu-background);
+	color:var(--gg-menu-foreground);
 	left:50%;
 	transform:translateX(-50%);
 	border:1px solid rgba(128,128,128,0.5);
@@ -11,10 +11,7 @@
 	font-size:13px;
 	line-height:17px;
 	z-index:41;
-	box-shadow:0 0 30px 5px var(--vscode-widget-shadow);
-}
-body.vscode-high-contrast .dialog{
-	border-color:var(--vscode-menu-border, rgba(128,128,128,0.5));
+	box-shadow:0 0 30px 5px var(--gg-widget-shadow);
 }
 
 .dialogContent{
@@ -77,10 +74,10 @@ body.vscode-high-contrast .dialog{
 	margin-right:7px;
 }
 .dialogContent .dialogFormCheckbox > label > input[type=checkbox]:checked ~ .customCheckbox:after{
-	border-color:var(--vscode-menu-foreground);
+	border-color:var(--gg-menu-foreground);
 }
 .dialogContent .dialogFormRadio > label > input[type=radio]:checked ~ .customRadio:after{
-	background-color:var(--vscode-menu-foreground);
+	background-color:var(--gg-menu-foreground);
 }
 
 .dialogContent > table.dialogForm input[type=text]{
@@ -91,16 +88,16 @@ body.vscode-high-contrast .dialog{
 	background-color:rgba(128,128,128,0.1);
 	border:1px solid rgba(128,128,128,0.5);
 	border-radius:4px;
-	color:var(--vscode-menu-foreground);
-	font-family:var(--vscode-font-family);
+	color:var(--gg-menu-foreground);
+	font-family:var(--gg-font-family);
 	font-size:13px;
 	line-height:17px;
 }
 .dialogContent > table.dialogForm input[type=text]:focus, .dialogContent .dialogFormCheckbox > label > input[type=checkbox]:focus ~ .customCheckbox, .dialogContent .dialogFormRadio > label > input[type=radio]:focus ~ .customRadio{
-	border-color:var(--vscode-focusBorder);
+	border-color:var(--gg-focusBorder);
 }
 .dialogContent > table.dialogForm input[type=text]::placeholder{
-	color:var(--vscode-menu-foreground);
+	color:var(--gg-menu-foreground);
 	opacity:0.4;
 }
 
@@ -151,7 +148,7 @@ body.vscode-high-contrast .dialog{
 
 .dialog svg{
 	display:inline;
-	fill:var(--vscode-menu-foreground);
+	fill:var(--gg-menu-foreground);
 	opacity:0.75;
 	vertical-align:sub;
 }
@@ -212,7 +209,7 @@ body.vscode-high-contrast .dialog{
 	border:1px solid rgba(128,128,128,0.5);
 	border-radius:4px;
 	outline-style:none;
-	color:var(--vscode-menu-foreground);
+	color:var(--gg-menu-foreground);
 	line-height:17px;
 	text-overflow:ellipsis;
 	white-space:nowrap;
@@ -230,17 +227,17 @@ body.vscode-high-contrast .dialog{
 	width:0;
 	height:0;
 	border:4px solid transparent;
-	border-color:var(--vscode-menu-foreground) transparent transparent transparent;
+	border-color:var(--gg-menu-foreground) transparent transparent transparent;
 }
 
 .customSelectCurrent:focus, .customSelectContainer.open .customSelectCurrent{
-	border-color:var(--vscode-focusBorder);
+	border-color:var(--gg-focusBorder);
 }
 .customSelectContainer.open .customSelectCurrent{
 	border-radius:4px 4px 0 0;
 }
 .customSelectContainer.open .customSelectCurrent:after{
-	border-color:transparent transparent var(--vscode-menu-foreground) transparent;
+	border-color:transparent transparent var(--gg-menu-foreground) transparent;
 	top:6px;
 }
 
@@ -248,9 +245,9 @@ body.vscode-high-contrast .dialog{
 	display:block;
 	position:absolute;
 	box-sizing:border-box;
-	background-color:var(--vscode-menu-background);
-	color:var(--vscode-menu-foreground);
-	border:1px solid var(--vscode-focusBorder);
+	background-color:var(--gg-menu-background);
+	color:var(--gg-menu-foreground);
+	border:1px solid var(--gg-focusBorder);
 	border-radius:0 0 4px 4px;
 	z-index:42;
 	text-align:left;
@@ -275,12 +272,8 @@ body.vscode-high-contrast .dialog{
 	background-color:rgba(128,128,128,0.2);
 }
 .customSelectOptions > .customSelectOption.focussed{
-	background-color:var(--vscode-menu-selectionBackground, rgba(128,128,128,0.05));
-	color:var(--vscode-menu-selectionForeground, var(--vscode-menu-foreground));
-}
-body.vscode-high-contrast .customSelectOptions > .customSelectOption.focussed{
-	outline:1px dotted var(--vscode-menu-selectionBorder, transparent);
-	outline-offset:-2px;
+	background-color:var(--gg-menu-selectionBackground, rgba(128,128,128,0.05));
+	color:var(--gg-menu-selectionForeground, var(--gg-menu-foreground));
 }
 
 .customSelectOptions.multiple > .customSelectOption{
@@ -299,10 +292,10 @@ body.vscode-high-contrast .customSelectOptions > .customSelectOption.focussed{
 	margin-top:-9px;
 }
 .customSelectOptions.multiple > .customSelectOption > .selectedIcon svg{
-	fill:var(--vscode-menu-foreground);
+	fill:var(--gg-menu-foreground);
 	opacity:0.7;
 }
 .customSelectOptions.multiple > .customSelectOption.focussed > .selectedIcon svg{
-	fill:var(--vscode-menu-selectionForeground, var(--vscode-menu-foreground));
+	fill:var(--gg-menu-selectionForeground, var(--gg-menu-foreground));
 	opacity:0.85;
 }

@@ -68,15 +68,15 @@ jobs:
       # Builds media/out.min.js + out.min.css from web/*.ts, which electron/index.html loads as
       # a sibling folder outside electron/ itself (electron-builder's extraResources config
       # bundles this into the packaged app - see electron/package.json).
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Build web assets
-        run: npm run compile
-
       - name: Install electron dependencies
         working-directory: electron
         run: npm ci
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build main process + web assets
+        run: npm run compile
 
       # Build only - explicitly `--publish never`. electron-builder's own GitHub publisher raced
       # itself creating the release when uploading multiple artifacts (installer + blockmap) at

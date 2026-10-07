@@ -8,7 +8,7 @@ export interface PickerItem {
 }
 
 /**
- * A small modal list-picker window, replacing VSCode's `vscode.window.showQuickPick`. Electron
+ * A small modal list-picker window. Electron
  * has no native equivalent (unlike showOpenDialog/showSaveDialog/showMessageBox, which map
  * directly to `dialog.*`), so this is a minimal bespoke window - same pattern as
  * `askpassManager.ts`'s credential prompt. Resolves with the selected item's index, or `null` if
@@ -82,7 +82,7 @@ function escapeHtml(s: string) {
 
 /**
  * A small modal single-line text prompt (Electron has no native equivalent of
- * `vscode.window.showInputBox`). Resolves with the entered text, or `null` if cancelled.
+ * input box). Resolves with the entered text, or `null` if cancelled.
  */
 export function showInput(title: string, prompt: string, placeholder: string = ''): Promise<string | null> {
 	return new Promise((resolve) => {

@@ -17,7 +17,7 @@ import { EventEmitter } from './utils/event';
 /**
  * Electron main process entry point - ports src/extension.ts's `activate()`. Wires the same
  * components (Logger, Store/ExtensionState, DataSource, AvatarManager, RepoManager) to a single
- * BrowserWindow + GitGraphIpcHandler instead of a vscode.ExtensionContext + GitGraphView webview.
+ * BrowserWindow + GitGraphIpcHandler.
  */
 
 let mainWindow: BrowserWindow | null = null;

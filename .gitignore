@@ -1,5 +1,6 @@
-coverage
-media
 node_modules
+media
 out
-*.vsix
+coverage
+electron/dist
+electron/release

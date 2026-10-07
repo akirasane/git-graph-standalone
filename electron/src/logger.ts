@@ -3,7 +3,7 @@ import { Disposable } from './utils/disposable';
 const DOUBLE_QUOTE_REGEXP = /"/g;
 
 /**
- * Ported from src/logger.ts. VSCode's Output Channel is replaced by the main process console
+ * Logs go to the main process console
  * (visible in the terminal that launched Electron, and in the DevTools console for renderer-side
  * inspection via `console.log`'s normal stdout piping).
  */

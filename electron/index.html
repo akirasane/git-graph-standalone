@@ -8,65 +8,65 @@
 	<style>
 		/*
 		 * Theme: "Terminal Velocity" (stitch_git_graph_standalone_theming_fix/DESIGN.md).
-		 * out.min.css is written against VSCode theme variables (--vscode-*), which only exist
-		 * inside a real VSCode webview - standalone Electron never injects them, so anything
+		 * out.min.css is written against theme variables (--gg-*) that the host page must define, so
+		 * anything
 		 * reading them (menu/dropdown/dialog backgrounds, borders) fell back to transparent, and
-		 * general body text had no foreground rule at all (VSCode's webview host normally supplies
-		 * that, not out.min.css) - the fix below both supplies the missing base text color and
-		 * maps every consumed --vscode-* var to this design system's tokens.
+		 * general body text had no foreground rule at all (out.min.css expects the
+		 * host page to supply it) - the fix below both supplies the missing base text color and
+		 * maps every consumed --gg-* var to this design system's tokens.
 		 */
 		body{
 			--git-graph-color0:#0085d9; --git-graph-color1:#d9008f; --git-graph-color2:#00d90a; --git-graph-color3:#d98500; --git-graph-color4:#a300d9; --git-graph-color5:#ff0000; --git-graph-color6:#00d9cc; --git-graph-color7:#e138e8; --git-graph-color8:#85d900; --git-graph-color9:#dc5b23; --git-graph-color10:#6f24d6; --git-graph-color11:#ffcc00;
 
-			--vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", sans-serif;
+			--gg-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", sans-serif;
 
 			/* Level 0/1/2 tonal layering */
-			--vscode-editor-background: #1e1e1e;
-			--vscode-editorWidget-background: #252526;
-			--vscode-menu-background: #3c3c3c;
+			--gg-editor-background: #1e1e1e;
+			--gg-editorWidget-background: #252526;
+			--gg-menu-background: #3c3c3c;
 
 			/* Text */
-			--vscode-editor-foreground: #d4d4d4;
-			--vscode-editorSuggestWidget-foreground: #d4d4d4;
-			--vscode-menu-foreground: #cccccc;
-			--vscode-input-foreground: #cccccc;
-			--vscode-input-placeholderForeground: #a6a6a6;
+			--gg-editor-foreground: #d4d4d4;
+			--gg-editorSuggestWidget-foreground: #d4d4d4;
+			--gg-menu-foreground: #cccccc;
+			--gg-input-foreground: #cccccc;
+			--gg-input-placeholderForeground: #a6a6a6;
 
 			/* Accents: #007fd4 = focus/primary actions, #3794ff = interactive text/links */
-			--vscode-focusBorder: #007fd4;
-			--vscode-textLink-foreground: #3794ff;
-			--vscode-textLink-activeForeground: #3794ff;
-			--vscode-inputOption-activeBorder: #007acc;
-			--vscode-inputOption-activeBackground: rgba(0,127,212,0.4);
+			--gg-focusBorder: #007fd4;
+			--gg-textLink-foreground: #3794ff;
+			--gg-textLink-activeForeground: #3794ff;
+			--gg-inputOption-activeBorder: #007acc;
+			--gg-inputOption-activeBackground: rgba(0,127,212,0.4);
 
 			/* Selection: #094771 for passive row/text selection, #007fd4 for active menu-item hover */
-			--vscode-selection-background: #094771;
-			--vscode-menu-selectionBackground: #007fd4;
-			--vscode-menu-selectionForeground: #ffffff;
-			--vscode-menu-selectionBorder: transparent;
+			--gg-selection-background: #094771;
+			--gg-menu-selectionBackground: #007fd4;
+			--gg-menu-selectionForeground: #ffffff;
+			--gg-menu-selectionBorder: transparent;
 
 			/* Borders / separators - 1px solid lines define structure, no blur/shadow per design */
-			--vscode-menu-border: #454545;
-			--vscode-menu-separatorBackground: #454545;
-			--vscode-widget-shadow: rgba(0,0,0,0.5);
-			--vscode-scrollbar-shadow: #000000;
+			--gg-menu-border: #454545;
+			--gg-menu-separatorBackground: #454545;
+			--gg-widget-shadow: rgba(0,0,0,0.5);
+			--gg-scrollbar-shadow: #000000;
 
-			--vscode-input-background: #3c3c3c;
-			--vscode-inputValidation-errorBorder: #be1100;
-			--vscode-inputValidation-errorBackground: #5a1d1d;
-			--vscode-editor-findMatchHighlightBorder: #ea5c00aa;
+			--gg-input-background: #3c3c3c;
+			--gg-inputValidation-errorBorder: #be1100;
+			--gg-inputValidation-errorBackground: #5a1d1d;
+			--gg-editor-findMatchHighlightBorder: #ea5c00aa;
 
-			--vscode-gitDecoration-modifiedResourceForeground: #e2c08d;
-			--vscode-gitDecoration-addedResourceForeground: #81b88b;
-			--vscode-gitDecoration-deletedResourceForeground: #c74e39;
+			--gg-gitDecoration-modifiedResourceForeground: #e2c08d;
+			--gg-gitDecoration-addedResourceForeground: #81b88b;
+			--gg-gitDecoration-deletedResourceForeground: #c74e39;
 		}
 
-		/* out.min.css never sets a base foreground color (assumes the VSCode webview host
+		/* out.min.css never sets a base foreground color (assumes the host page
 		   supplies one) - this is the actual fix for the dark-bg/dark-text bug. */
 		body, #view{
-			color: var(--vscode-editor-foreground);
-			font-family: var(--vscode-font-family);
-			background-color: var(--vscode-editor-background);
+			color: var(--gg-editor-foreground);
+			font-family: var(--gg-font-family);
+			background-color: var(--gg-editor-background);
 		}
 
 		[data-color="0"]{--git-graph-color:var(--git-graph-color0);} [data-color="1"]{--git-graph-color:var(--git-graph-color1);} [data-color="2"]{--git-graph-color:var(--git-graph-color2);} [data-color="3"]{--git-graph-color:var(--git-graph-color3);} [data-color="4"]{--git-graph-color:var(--git-graph-color4);} [data-color="5"]{--git-graph-color:var(--git-graph-color5);} [data-color="6"]{--git-graph-color:var(--git-graph-color6);} [data-color="7"]{--git-graph-color:var(--git-graph-color7);} [data-color="8"]{--git-graph-color:var(--git-graph-color8);} [data-color="9"]{--git-graph-color:var(--git-graph-color9);} [data-color="10"]{--git-graph-color:var(--git-graph-color10);} [data-color="11"]{--git-graph-color:var(--git-graph-color11);}
@@ -79,11 +79,11 @@
 		#addRepoBtn{
 			position:absolute; left:8px; top:50%; transform:translateY(-50%);
 			height:22px; padding:0 10px; line-height:22px; font-size:12px;
-			background:var(--vscode-menu-background); color:var(--vscode-menu-foreground);
+			background:var(--gg-menu-background); color:var(--gg-menu-foreground);
 			border:1px solid transparent; border-radius:0; cursor:pointer;
 		}
 		#addRepoBtn:hover{ background:#4a4a4a; }
-		#addRepoBtn:active{ border-color:var(--vscode-focusBorder); }
+		#addRepoBtn:active{ border-color:var(--gg-focusBorder); }
 		#controls{ padding-left:110px; }
 
 		/*
@@ -111,8 +111,8 @@
 			bottom: 0;
 			width: var(--cdv-panel-width);
 			height: auto !important;
-			background-color: var(--vscode-editorWidget-background);
-			border-left: 1px solid var(--vscode-menu-border);
+			background-color: var(--gg-editorWidget-background);
+			border-left: 1px solid var(--gg-menu-border);
 		}
 		/* Height-resize handle only makes sense for the old bottom-docked bar. */
 		#cdv.docked .cdvHeightResize{ display:none !important; }
@@ -123,7 +123,7 @@
 			top: 0 !important; left: 0 !important; right: 0 !important; width: auto !important;
 			bottom: auto !important; height: 180px !important;
 			border-right: none !important;
-			border-bottom: 1px solid var(--vscode-menu-border);
+			border-bottom: 1px solid var(--gg-menu-border);
 			overflow-y: auto;
 		}
 		#cdv.docked #cdvFiles{
@@ -139,27 +139,27 @@
 		 */
 		#wcPanel{
 			position: fixed; right: 0; top: 41px; bottom: 0; width: var(--cdv-panel-width);
-			background-color: var(--vscode-editorWidget-background);
-			border-left: 1px solid var(--vscode-menu-border);
+			background-color: var(--gg-editorWidget-background);
+			border-left: 1px solid var(--gg-menu-border);
 			display: flex; flex-direction: column;
 			font-size: 13px; z-index: 5; overflow: hidden;
 		}
-		.wcTabs{ display: flex; border-bottom: 1px solid var(--vscode-menu-border); flex-shrink: 0; }
+		.wcTabs{ display: flex; border-bottom: 1px solid var(--gg-menu-border); flex-shrink: 0; }
 		.wcTab{
 			flex: 1; padding: 8px 4px; text-align: center; cursor: pointer;
-			background: transparent; color: var(--vscode-menu-foreground); border: none;
+			background: transparent; color: var(--gg-menu-foreground); border: none;
 			border-bottom: 2px solid transparent; font-size: 12px;
 		}
-		.wcTab.active{ color: var(--vscode-editor-foreground); border-bottom-color: var(--vscode-focusBorder); }
+		.wcTab.active{ color: var(--gg-editor-foreground); border-bottom-color: var(--gg-focusBorder); }
 		.wcTabContent{ flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
-		.wcSection{ border-bottom: 1px solid var(--vscode-menu-border); flex-shrink: 0; max-height: 33%; display: flex; flex-direction: column; }
+		.wcSection{ border-bottom: 1px solid var(--gg-menu-border); flex-shrink: 0; max-height: 33%; display: flex; flex-direction: column; }
 		.wcSectionHeader{
 			display: flex; justify-content: space-between; align-items: center;
 			padding: 6px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
-			color: var(--vscode-input-placeholderForeground); flex-shrink: 0;
+			color: var(--gg-input-placeholderForeground); flex-shrink: 0;
 		}
 		.wcSmallBtn{
-			background: var(--vscode-menu-background); color: var(--vscode-menu-foreground);
+			background: var(--gg-menu-background); color: var(--gg-menu-foreground);
 			border: 1px solid transparent; padding: 2px 8px; font-size: 11px; cursor: pointer; border-radius: 0;
 		}
 		.wcSmallBtn:hover{ background: #4a4a4a; }
@@ -170,30 +170,30 @@
 		.wcFileRow:hover{ background-color: rgba(128,128,128,0.15); }
 		.wcFileName{ flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 		.wcFileStats{ font-size: 11px; white-space: nowrap; }
-		.wcAdd{ color: var(--vscode-gitDecoration-addedResourceForeground); margin-right: 4px; }
-		.wcDel{ color: var(--vscode-gitDecoration-deletedResourceForeground); }
+		.wcAdd{ color: var(--gg-gitDecoration-addedResourceForeground); margin-right: 4px; }
+		.wcDel{ color: var(--gg-gitDecoration-deletedResourceForeground); }
 		.wcFileAction{
-			background: transparent; color: var(--vscode-menu-foreground); border: 1px solid var(--vscode-menu-border);
+			background: transparent; color: var(--gg-menu-foreground); border: 1px solid var(--gg-menu-border);
 			width: 18px; height: 18px; line-height: 14px; padding: 0; cursor: pointer; border-radius: 0; flex-shrink: 0;
 		}
-		.wcFileAction:hover{ background: var(--vscode-menu-selectionBackground); color: var(--vscode-menu-selectionForeground); }
-		.wcEmpty{ padding: 6px 10px; color: var(--vscode-input-placeholderForeground); font-style: italic; }
+		.wcFileAction:hover{ background: var(--gg-menu-selectionBackground); color: var(--gg-menu-selectionForeground); }
+		.wcEmpty{ padding: 6px 10px; color: var(--gg-input-placeholderForeground); font-style: italic; }
 		.wcCommitSection{ padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
 		.wcCommitSection input[type="text"], .wcCommitSection textarea{
-			background: var(--vscode-input-background); color: var(--vscode-input-foreground);
+			background: var(--gg-input-background); color: var(--gg-input-foreground);
 			border: 1px solid transparent; padding: 4px 6px; font-family: inherit; font-size: 12px; resize: vertical;
 		}
 		.wcCommitSection input[type="text"]:focus, .wcCommitSection textarea:focus{
-			outline: none; border-color: var(--vscode-focusBorder);
+			outline: none; border-color: var(--gg-focusBorder);
 		}
 		.wcPushLabel{ font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
 		.wcCommitBtn{
-			background: var(--vscode-focusBorder); color: #ffffff; border: none; padding: 6px; font-size: 12px;
+			background: var(--gg-focusBorder); color: #ffffff; border: none; padding: 6px; font-size: 12px;
 			cursor: pointer; border-radius: 0;
 		}
-		.wcCommitBtn:disabled{ background: var(--vscode-menu-background); color: var(--vscode-input-placeholderForeground); cursor: default; }
-		.wcMessage{ font-size: 11px; color: var(--vscode-gitDecoration-addedResourceForeground); min-height: 14px; }
-		.wcMessage.wcError{ color: var(--vscode-gitDecoration-deletedResourceForeground); }
+		.wcCommitBtn:disabled{ background: var(--gg-menu-background); color: var(--gg-input-placeholderForeground); cursor: default; }
+		.wcMessage{ font-size: 11px; color: var(--gg-gitDecoration-addedResourceForeground); min-height: 14px; }
+		.wcMessage.wcError{ color: var(--gg-gitDecoration-deletedResourceForeground); }
 		.wcStashRow{ display: flex; align-items: center; gap: 6px; padding: 4px 10px; }
 		.wcStashMessage{ flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 		.wcStashActions{ display: flex; gap: 4px; flex-shrink: 0; }
@@ -203,74 +203,74 @@
 		#view{ left: var(--sb-width) !important; }
 		#sidebar{
 			position: fixed; left: 0; top: 0; bottom: 0; width: var(--sb-width);
-			background-color: var(--vscode-editorWidget-background);
-			border-right: 1px solid var(--vscode-menu-border);
+			background-color: var(--gg-editorWidget-background);
+			border-right: 1px solid var(--gg-menu-border);
 			display: flex; flex-direction: column; font-size: 12px; z-index: 5; overflow: hidden;
 		}
-		#sbTop{ display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--vscode-menu-border); flex-shrink: 0; }
+		#sbTop{ display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--gg-menu-border); flex-shrink: 0; }
 		#sbFilter{
-			flex: 1; min-width: 0; background: var(--vscode-input-background); color: var(--vscode-input-foreground);
-			border: 1px solid var(--vscode-menu-border); padding: 3px 6px; font-size: 12px;
+			flex: 1; min-width: 0; background: var(--gg-input-background); color: var(--gg-input-foreground);
+			border: 1px solid var(--gg-menu-border); padding: 3px 6px; font-size: 12px;
 		}
-		#sbFilter:focus{ outline: none; border-color: var(--vscode-focusBorder); }
+		#sbFilter:focus{ outline: none; border-color: var(--gg-focusBorder); }
 		#sbScroll{ flex: 1; overflow-y: auto; min-height: 0; }
 		.sbHeader{
 			padding: 5px 8px; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: .04em;
 			cursor: pointer; user-select: none; background: rgba(128,128,128,0.12); display: flex; align-items: center;
 		}
 		.sbCaret{ width: 12px; }
-		.sbCount{ margin-left: auto; color: var(--vscode-input-placeholderForeground); font-weight: 400; }
+		.sbCount{ margin-left: auto; color: var(--gg-input-placeholderForeground); font-weight: 400; }
 		.sbList{ list-style: none; margin: 0; padding: 0; }
 		.sbRow{ display: flex; align-items: center; padding: 3px 8px 3px 20px; cursor: default; }
 		.sbRow:hover{ background: rgba(128,128,128,0.18); }
-		.sbRow.sbCurrent{ font-weight: 600; color: var(--vscode-textLink-foreground); }
+		.sbRow.sbCurrent{ font-weight: 600; color: var(--gg-textLink-foreground); }
 		.sbDot{ font-size: 8px; margin-right: 5px; margin-left: -12px; }
 		.sbLabel{ flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 		.sbActions{ display: none; gap: 2px; flex-shrink: 0; }
 		.sbRow:hover .sbActions{ display: flex; }
-		.sbBtn{ background: var(--vscode-menu-background); color: var(--vscode-menu-foreground); border: 0; padding: 0 5px; font-size: 11px; cursor: pointer; line-height: 16px; }
-		.sbBtn:hover{ background: var(--vscode-menu-selectionBackground); color: var(--vscode-menu-selectionForeground); }
-		.sbRemoteName{ padding: 4px 8px 2px 14px; color: var(--vscode-input-placeholderForeground); font-size: 11px; }
-		.sbEmpty{ padding: 4px 20px; font-style: italic; color: var(--vscode-input-placeholderForeground); }
+		.sbBtn{ background: var(--gg-menu-background); color: var(--gg-menu-foreground); border: 0; padding: 0 5px; font-size: 11px; cursor: pointer; line-height: 16px; }
+		.sbBtn:hover{ background: var(--gg-menu-selectionBackground); color: var(--gg-menu-selectionForeground); }
+		.sbRemoteName{ padding: 4px 8px 2px 14px; color: var(--gg-input-placeholderForeground); font-size: 11px; }
+		.sbEmpty{ padding: 4px 20px; font-style: italic; color: var(--gg-input-placeholderForeground); }
 
 		/* out.min.css hides every checkbox (it uses .customCheckbox spans); the panel uses plain ones. */
 		.wcPushLabel input[type="checkbox"]{ position: static; width: 14px; height: 14px; opacity: 1; margin: 0; }
 		#sbConflicts{ border-bottom: 2px solid #d98500; background: rgba(217,133,0,0.12); padding: 6px 8px; flex-shrink: 0; max-height: 40%; overflow-y: auto; }
 		.cfTitle{ font-weight: 600; color: #e2a03f; }
-		.cfSub{ margin: 2px 0 4px; color: var(--vscode-input-placeholderForeground); }
+		.cfSub{ margin: 2px 0 4px; color: var(--gg-input-placeholderForeground); }
 		.cfList{ list-style: none; margin: 0 0 6px; padding: 0; }
-		.cfFile{ padding: 2px 4px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-gitDecoration-deletedResourceForeground); }
+		.cfFile{ padding: 2px 4px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gg-gitDecoration-deletedResourceForeground); }
 		.cfFile:hover{ background: rgba(128,128,128,0.2); }
 		.cfButtons{ display: flex; gap: 4px; }
 		.cfButtons button:disabled{ opacity: .45; cursor: default; }
-		.cfMessage{ color: var(--vscode-gitDecoration-deletedResourceForeground); font-size: 11px; margin-top: 4px; }
+		.cfMessage{ color: var(--gg-gitDecoration-deletedResourceForeground); font-size: 11px; margin-top: 4px; }
 
 		#cfOverlay{
 			position: fixed; inset: 0; z-index: 50; display: none; flex-direction: column;
-			background: var(--vscode-editor-background);
+			background: var(--gg-editor-background);
 		}
-		#cfBar{ display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--vscode-menu-border); flex-shrink: 0; }
+		#cfBar{ display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--gg-menu-border); flex-shrink: 0; }
 		#cfEditorTitle{ font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-		#cfStatus{ color: var(--vscode-input-placeholderForeground); }
-		#cfSaveBtn{ background: var(--vscode-focusBorder); color: #fff; border: 0; padding: 4px 12px; cursor: pointer; }
+		#cfStatus{ color: var(--gg-input-placeholderForeground); }
+		#cfSaveBtn{ background: var(--gg-focusBorder); color: #fff; border: 0; padding: 4px 12px; cursor: pointer; }
 		#cfEditorBody{ flex: 1; display: flex; flex-direction: column; min-height: 0; }
-		.cfHunks{ flex: 0 0 50%; overflow-y: auto; padding: 8px 12px; border-bottom: 1px solid var(--vscode-menu-border); }
-		.cfNote{ padding: 10px 12px; } .cfErr{ color: var(--vscode-gitDecoration-deletedResourceForeground); }
-		.cfHunk{ border: 1px solid var(--vscode-menu-border); margin-bottom: 8px; }
+		.cfHunks{ flex: 0 0 50%; overflow-y: auto; padding: 8px 12px; border-bottom: 1px solid var(--gg-menu-border); }
+		.cfNote{ padding: 10px 12px; } .cfErr{ color: var(--gg-gitDecoration-deletedResourceForeground); }
+		.cfHunk{ border: 1px solid var(--gg-menu-border); margin-bottom: 8px; }
 		.cfHunk.cfOpen{ border-color: #d98500; }
 		.cfHunkHead{ display: flex; align-items: center; padding: 4px 8px; background: rgba(128,128,128,0.15); font-weight: 600; }
 		.cfChoices{ margin-left: auto; display: flex; gap: 4px; }
-		.cfActive{ background: var(--vscode-focusBorder) !important; color: #fff; }
+		.cfActive{ background: var(--gg-focusBorder) !important; color: #fff; }
 		.cfPanes{ display: flex; }
 		.cfPane{ flex: 1; min-width: 0; }
-		.cfPane + .cfPane{ border-left: 1px solid var(--vscode-menu-border); }
-		.cfPaneTitle{ padding: 3px 8px; font-size: 11px; color: var(--vscode-input-placeholderForeground); }
+		.cfPane + .cfPane{ border-left: 1px solid var(--gg-menu-border); }
+		.cfPaneTitle{ padding: 3px 8px; font-size: 11px; color: var(--gg-input-placeholderForeground); }
 		.cfPane pre{ margin: 0; padding: 4px 8px; font-family: Consolas, monospace; font-size: 12px; overflow-x: auto; white-space: pre; }
 		.cfOurs pre{ background: rgba(0,133,217,0.14); } .cfTheirs pre{ background: rgba(0,217,10,0.12); }
 		.cfOutputWrap{ flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0 12px 12px; }
 		#cfOutput{
-			flex: 1; resize: none; background: var(--vscode-input-background); color: var(--vscode-input-foreground);
-			border: 1px solid var(--vscode-menu-border); font-family: Consolas, monospace; font-size: 12px; padding: 6px; white-space: pre; overflow: auto;
+			flex: 1; resize: none; background: var(--gg-input-background); color: var(--gg-input-foreground);
+			border: 1px solid var(--gg-menu-border); font-family: Consolas, monospace; font-size: 12px; padding: 6px; white-space: pre; overflow: auto;
 		}
 	</style>
 	<link rel="stylesheet" href="theme.css">

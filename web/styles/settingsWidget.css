@@ -7,12 +7,12 @@
 	min-height:146px;
 	padding:0 10px 4px 10px;
 	z-index:31;
-	background-color:var(--vscode-editorWidget-background);
-	box-shadow:0 2px 8px var(--vscode-widget-shadow);
+	background-color:var(--gg-editorWidget-background);
+	box-shadow:0 2px 8px var(--gg-widget-shadow);
 	line-height:17px;
 	font-size:13px;
-	color:var(--vscode-editorSuggestWidget-foreground);
-	fill:var(--vscode-editorSuggestWidget-foreground);
+	color:var(--gg-editorSuggestWidget-foreground);
+	fill:var(--gg-editorSuggestWidget-foreground);
 	fill-opacity:0.7;
 	-webkit-user-select:none;
 	user-select:none;
@@ -68,7 +68,7 @@
 	left:0;
 	right:0;
 	height:1px;
-	background-color:var(--vscode-editorSuggestWidget-foreground);
+	background-color:var(--gg-editorSuggestWidget-foreground);
 	opacity:0.3;
 }
 .settingsSection:before, .settingsSection > table tr.lineAbove td:before, .settingsSection .settingsSectionButtons.lineAbove:before{
@@ -183,7 +183,7 @@
 }
 
 .settingsSection label > input[type=checkbox]:checked ~ .customCheckbox:after{
-	border-color:var(--vscode-editorSuggestWidget-foreground);
+	border-color:var(--gg-editorSuggestWidget-foreground);
 }
 
 .settingsSectionButtons > div.editBtn svg{

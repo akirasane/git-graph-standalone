@@ -579,8 +579,8 @@ export interface ResponseWithMultiErrorInfo extends BaseMessage {
 
 export type ErrorInfo = string | null; // null => no error, otherwise => error message
 
-export const enum ErrorInfoExtensionPrefix {
-	PushTagCommitNotOnRemote = 'VSCODE_GIT_GRAPH:PUSH_TAG:COMMIT_NOT_ON_REMOTE:'
+export const enum ErrorInfoAppPrefix {
+	PushTagCommitNotOnRemote = 'GIT_GRAPH:PUSH_TAG:COMMIT_NOT_ON_REMOTE:'
 }
 
 /* Request / Response Messages */

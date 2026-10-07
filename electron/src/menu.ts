@@ -11,7 +11,7 @@ import { checkForUpdates } from './updater';
 import { GitExecutable, abbrevCommit, abbrevText, copyToClipboard, getAppVersion, getRelativeTimeDiff, getRepoName, getSortedRepositoryPaths, showErrorMessage, showInformationMessage } from './utils';
 
 /**
- * Ported from src/commands.ts. VSCode's command palette entries become an Electron application
+ * The application menu (Electron Menu), plus the
  * Menu; `showOpenDialog` maps directly to Electron's native `dialog.showOpenDialog` (no change in
  * kind needed), but `showQuickPick` has no native Electron equivalent, so repo/code-review
  * pickers use the small bespoke `pickerWindow.ts` list instead.

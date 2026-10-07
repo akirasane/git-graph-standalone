@@ -1,12 +1,12 @@
 // Left sidebar (GitKraken-style): local branches, remote branches, tags, stashes, plus the
 // conflict list managed by conflicts.js (it renders into #sbConflicts). Isolated from
-// media/out.min.js like panel.js - own acquireVsCodeApi() handle + own 'message' listener, and
+// media/out.min.js like panel.js - own acquireHostApi() handle + own 'message' listener, and
 // never touches getState()/setState(). Actions reuse the existing request commands, so the main
 // frontend's own response handlers (refresh / error dialogs) keep working unchanged.
 (function () {
 	'use strict';
 
-	var api = window.acquireVsCodeApi();
+	var api = window.acquireHostApi();
 	var data = { branches: [], head: null, remotes: [], stashes: [], tags: [] };
 	var collapsed = {};
 	var filter = '';

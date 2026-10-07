@@ -9,7 +9,7 @@ import { openGitTerminal as spawnGitTerminal } from './terminal';
 import { ErrorInfo, GitFileStatus, GitRepoSet, PullRequestConfig, PullRequestProvider, RepoDropdownOrder } from './types';
 
 /**
- * Ported from src/utils.ts. Where VSCode had no standalone equivalent yet (viewDiff/
+ * Helpers shared by the main process (viewDiff/
  * viewDiffWithWorkingFile/viewFileAtRevision - Phase 5's job), functions are stubbed with a clear
  * "not yet implemented" ErrorInfo rather than silently doing nothing. Where an Electron API is a
  * direct substitute (clipboard, shell.openExternal, shell.openPath, dialog, terminal.ts), they're
@@ -117,7 +117,7 @@ export function getRepoName(path: string) {
 /**
  * `workspaceFolderIndex` is repurposed by the ported repoManager.ts as an index into `rootFolders`;
  * `RepoDropdownOrder.WorkspaceFullPath` sorts by that index the same way the original sorted by
- * VSCode workspace folder order.
+ * folder order.
  */
 export function getSortedRepositoryPaths(repos: GitRepoSet, order: RepoDropdownOrder): ReadonlyArray<string> {
 	const repoPaths = Object.keys(repos);
@@ -140,7 +140,7 @@ export function getSortedRepositoryPaths(repos: GitRepoSet, order: RepoDropdownO
 }
 
 
-/* Electron Command Wrappers (replacing "Visual Studio Code Command Wrappers") */
+/* Electron Command Wrappers */
 
 /**
  * Create an archive of a repository at a specific reference, and save to disk.
@@ -221,7 +221,7 @@ export async function openExternalUrl(url: string, type: string = 'External URL'
 
 /**
  * Open a file within a repository using the OS's default application (Electron `shell.openPath`,
- * replacing VSCode's `vscode.commands.executeCommand('vscode.open', ...)`).
+ * opens the file with the OS default application).
  */
 export async function openFile(repo: string, filePath: string, hash: string | null = null, dataSource: DataSource | null = null) {
 	let newFilePath = filePath;
@@ -280,7 +280,7 @@ export async function viewFileAtRevision(repo: string, hash: string, filePath: s
 	return diffWindow.viewFileAtRevision(dataSource, repo, hash, filePath);
 }
 
-/** No standalone equivalent - VSCode's Source Control view has no analogue here. */
+/** No-op: there is no separate Source Control view in the standalone app. */
 export function viewScm(): Promise<ErrorInfo> {
 	return Promise.resolve(null);
 }
@@ -290,7 +290,7 @@ export function openGitTerminal(cwd: string, gitPath: string, command: string | 
 }
 
 
-/* Electron API Wrappers (replacing "Visual Studio Code API Wrappers") */
+/* Electron API Wrappers */
 
 export async function showInformationMessage(message: string) {
 	const { dialog } = await import('electron');
@@ -364,8 +364,7 @@ export function resolveSpawnOutput(cmd: cp.ChildProcess) {
 
 /* Find Git Executable */
 
-// Ported from VSCode's Git Extension's git-finding logic (see src/utils.ts for the original
-// attribution) - pure Node child_process/fs, no VSCode dependency in the original either.
+// Git-finding logic, based on the Git extension in Microsoft's VS Code (MIT) - pure Node child_process/fs.
 
 export interface GitExecutable {
 	readonly path: string;

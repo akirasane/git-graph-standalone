@@ -5,12 +5,12 @@ import * as path from 'path';
 import { AskpassEnvironment, AskpassManager } from './askpass/askpassManager';
 import { getConfig } from './config';
 import { Logger } from './logger';
-import { CommitOrdering, ConflictOperation, DateType, DeepWriteable, ErrorInfo, ErrorInfoExtensionPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, SquashMessageFormat, TagType, Writeable } from './types';
+import { CommitOrdering, ConflictOperation, DateType, DeepWriteable, ErrorInfo, ErrorInfoAppPrefix, GitCommit, GitCommitDetails, GitCommitStash, GitConfigLocation, GitFileChange, GitFileStatus, GitPushBranchMode, GitRepoConfig, GitRepoConfigBranches, GitResetMode, GitSignature, GitSignatureStatus, GitStash, GitTagDetails, MergeActionOn, RebaseActionOn, SquashMessageFormat, TagType, Writeable } from './types';
 import { GitExecutable, GitVersionRequirement, UNABLE_TO_FIND_GIT_MSG, UNCOMMITTED, abbrevCommit, constructIncompatibleGitVersionMessage, doesVersionMeetRequirement, getPathFromStr, openGitTerminal, pathWithTrailingSlash, realpath, resolveSpawnOutput, showErrorMessage } from './utils';
 import { Disposable } from './utils/disposable';
 import { Event } from './utils/event';
 
-/** Ported from src/dataSource.ts: minimal replacement for `vscode.ConfigurationChangeEvent`. */
+/** Emitted when a setting that affects Git commands changes. */
 export interface ConfigChangeEvent {
 	affectsConfiguration(section: string): boolean;
 }
@@ -824,7 +824,7 @@ export class DataSource extends Disposable {
 			const remotesContainingCommit = await this.getRemotesContainingCommit(repo, commitHash, remotes).catch(() => remotes);
 			const remotesNotContainingCommit = remotes.filter((remote) => !remotesContainingCommit.includes(remote));
 			if (remotesNotContainingCommit.length > 0) {
-				return [ErrorInfoExtensionPrefix.PushTagCommitNotOnRemote + JSON.stringify(remotesNotContainingCommit)];
+				return [ErrorInfoAppPrefix.PushTagCommitNotOnRemote + JSON.stringify(remotesNotContainingCommit)];
 			}
 		}
 

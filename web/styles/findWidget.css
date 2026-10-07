@@ -6,12 +6,12 @@
 	height:34px;
 	padding:0 10px;
 	z-index:21;
-	background-color:var(--vscode-editorWidget-background);
-	box-shadow:0 2px 8px var(--vscode-widget-shadow);
+	background-color:var(--gg-editorWidget-background);
+	box-shadow:0 2px 8px var(--gg-widget-shadow);
 	line-height:34px;
 	font-size:13px;
-	color:var(--vscode-editorSuggestWidget-foreground);
-	fill:var(--vscode-editorSuggestWidget-foreground);
+	color:var(--gg-editorSuggestWidget-foreground);
+	fill:var(--gg-editorSuggestWidget-foreground);
 	fill-opacity:0.7;
 	white-space:nowrap;
 }
@@ -22,7 +22,7 @@
 	transition:top .2s linear;
 }
 .findWidget[data-error] #findInput, .findWidget[data-error]:after{
-	outline:1px solid var(--vscode-inputValidation-errorBorder) !important;
+	outline:1px solid var(--gg-inputValidation-errorBorder) !important;
 }
 .findWidget[data-error]:after{
 	content:attr(data-error);
@@ -34,7 +34,7 @@
 	padding:5px;
 	font-size:12px;
 	line-height:16px;
-	background-color:var(--vscode-inputValidation-errorBackground);
+	background-color:var(--gg-inputValidation-errorBackground);
 	outline-offset:-1px !important;
 	white-space:normal;
 }
@@ -47,16 +47,16 @@
 	border:0;
 	height:16px;
 	width:159px;
-	background-color:var(--vscode-input-background);
-	color:var(--vscode-input-foreground);
+	background-color:var(--gg-input-background);
+	color:var(--gg-input-foreground);
 	font-size:13px;
 	outline-offset:-1px !important;
 }
 #findInput:focus{
-	outline:1px solid var(--vscode-focusBorder);
+	outline:1px solid var(--gg-focusBorder);
 }
 #findInput::placeholder{
-	color:var(--vscode-input-placeholderForeground);
+	color:var(--gg-input-placeholderForeground);
 }
 
 .findModifier{
@@ -71,13 +71,13 @@
 	-webkit-user-select:none;
 	user-select:none;
 	text-align:center;
-	color:var(--vscode-input-foreground);
+	color:var(--gg-input-foreground);
 	opacity:0.7;
 }
 .findModifier.active, #findOpenCdv.active{
-	outline:1px solid var(--vscode-inputOption-activeBorder);
+	outline:1px solid var(--gg-inputOption-activeBorder);
 	outline-offset:-1px;
-	background-color:var(--vscode-inputOption-activeBackground);
+	background-color:var(--gg-inputOption-activeBackground);
 }
 .findModifier:hover, .findModifier.active{
 	opacity:1;
@@ -129,9 +129,6 @@
 
 .findMatch{
 	background-color:var(--git-graph-findMatch, transparent);
-	outline:1px solid var(--vscode-editor-findMatchHighlightBorder, transparent);
+	outline:1px solid var(--gg-editor-findMatchHighlightBorder, transparent);
 	outline-offset:-1px;
-}
-body.vscode-high-contrast .findMatch{
-	outline-style:dotted;
 }

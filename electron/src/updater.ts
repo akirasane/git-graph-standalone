@@ -18,6 +18,18 @@ export function initAutoUpdater(win: BrowserWindow) {
 
 	autoUpdater.autoDownload = false;
 	autoUpdater.autoInstallOnAppQuit = false;
+	// GitHub release assets can't be fetched with range requests reliably, and the previous version's
+	// blockmap isn't always available - a plain full download is simpler and robust.
+	autoUpdater.disableDifferentialDownload = true;
+
+	let baseTitle: string | null = null;
+	let lastTitleUpdate = 0;
+	const finishProgress = () => {
+		if (win.isDestroyed()) return;
+		win.setProgressBar(-1);
+		if (baseTitle !== null) win.setTitle(baseTitle);
+		baseTitle = null;
+	};
 
 	autoUpdater.on('update-available', (info) => {
 		dialog.showMessageBox(win, {
@@ -28,13 +40,37 @@ export function initAutoUpdater(win: BrowserWindow) {
 			defaultId: 0,
 			cancelId: 1
 		}).then((result) => {
-			if (result.response === 0) {
-				autoUpdater.downloadUpdate().catch((err) => logger.logError('Failed to download update: ' + err.message));
-			}
+			if (result.response !== 0) return;
+			baseTitle = win.getTitle();
+			win.setProgressBar(2); // indeterminate until the first progress event
+			win.setTitle(baseTitle + ' - Downloading update...');
+			dialog.showMessageBox(win, {
+				type: 'info',
+				title: 'Downloading Update',
+				message: 'Downloading Git Graph ' + info.version + ' in the background.',
+				detail: 'Progress shows in the window title and the taskbar icon. Keep the app open - you will be asked to restart when it finishes.',
+				buttons: ['OK']
+			});
+			autoUpdater.downloadUpdate().catch((err) => {
+				logger.logError('Failed to download update: ' + err.message);
+				finishProgress();
+				dialog.showMessageBox(win, { type: 'error', title: 'Update Failed', message: 'The update could not be downloaded.', detail: err.message, buttons: ['OK'] });
+			});
 		});
 	});
 
+	autoUpdater.on('download-progress', (progress) => {
+		if (win.isDestroyed()) return;
+		win.setProgressBar(Math.max(0, Math.min(1, progress.percent / 100)));
+		const now = Date.now();
+		if (baseTitle !== null && now - lastTitleUpdate > 500) {
+			lastTitleUpdate = now;
+			win.setTitle(baseTitle + ' - Downloading update ' + Math.round(progress.percent) + '%');
+		}
+	});
+
 	autoUpdater.on('update-downloaded', (info) => {
+		finishProgress();
 		dialog.showMessageBox(win, {
 			type: 'info',
 			title: 'Update Ready',
@@ -51,7 +87,7 @@ export function initAutoUpdater(win: BrowserWindow) {
 
 	autoUpdater.on('error', (err) => {
 		checkInFlight = false;
-		logger.logError('Auto-update check failed: ' + err.message);
+		logger.logError('Auto-update failed: ' + err.message);
 	});
 }
 

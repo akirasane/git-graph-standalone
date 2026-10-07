@@ -1,6 +1,6 @@
 {
 	"name": "git-graph-standalone",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"private": true,
 	"description": "Git Graph Standalone - a desktop Git client with a commit graph, built with Electron. Root project builds the renderer (web/ -> media/); the app itself lives in electron/.",
 	"license": "MIT",

@@ -3,23 +3,41 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Git Graph</title>
+	<link rel="stylesheet" href="theme.css">
 	<style>
-		body{ margin:0; height:100vh; display:flex; align-items:center; justify-content:center; background:#1e1e1e; color:#d4d4d4; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-		.box{ text-align:center; max-width:420px; }
-		h1{ font-size:20px; font-weight:600; margin:0 0 8px; }
-		p{ color:#a6a6a6; margin:0 0 20px; }
-		button{ background:#0e639c; color:#fff; border:0; padding:8px 18px; margin:0 4px; font-size:13px; cursor:pointer; }
-		button.secondary{ background:#3a3d41; }
-		button:hover{ filter:brightness(1.15); }
+		html,body{ margin:0; height:100%; }
+		body{ display:flex; align-items:center; justify-content:center; background:var(--bg); color:var(--text); font-family:var(--vscode-font-family); overflow:hidden; }
+		.box{ position:relative; z-index:1; text-align:center; max-width:460px; padding:44px 48px; border-radius:20px;
+			background:rgba(17,20,27,.55); backdrop-filter:blur(22px); border:1px solid var(--line-strong);
+			box-shadow:0 40px 100px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06); animation:fx-pop .6s var(--ease); }
+		.logo{ width:52px; height:52px; margin:0 auto 22px; border-radius:15px; background:var(--grad); display:grid; place-items:center;
+			box-shadow:0 10px 36px rgba(124,140,255,.5); }
+		.logo svg{ width:26px; height:26px; fill:none; stroke:#0b0d12; stroke-width:2.2; stroke-linecap:round; }
+		h1{ font-size:26px; font-weight:700; letter-spacing:-.02em; margin:0 0 10px; }
+		p{ margin:0 0 28px; line-height:1.55; font-size:14px; }
+		.btns{ display:flex; gap:10px; justify-content:center; }
+		button{ font:inherit; font-size:13px; font-weight:600; padding:10px 20px; border-radius:10px; border:0; cursor:pointer;
+			transition:transform .2s var(--ease), box-shadow .25s, background .2s; }
+		button:active{ transform:scale(.97); }
+		.primary{ position:relative; overflow:hidden; background:var(--grad); color:#0b0d12; }
+		.primary::after{ content:""; position:absolute; top:0; bottom:0; width:40%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation:fx-sweep 3.2s ease-in-out infinite; }
+		.primary:hover{ transform:translateY(-2px); box-shadow:0 12px 34px rgba(124,140,255,.5); }
+		.secondary{ background:rgba(255,255,255,.07); color:var(--text); border:1px solid var(--line-strong); }
+		.secondary:hover{ transform:translateY(-2px); background:rgba(255,255,255,.12); }
 	</style>
 </head>
 <body>
+	<div class="fx-aurora"><i></i><i></i><i></i></div>
 	<div class="box">
-		<h1>No repositories yet</h1>
-		<p>Open an existing Git repository, or clone a new one to get started.</p>
-		<button id="add">Open Repository...</button>
-		<button id="clone" class="secondary">Clone...</button>
+		<div class="logo"><svg viewBox="0 0 24 24"><circle cx="6" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M6 7.2v9.6M18 11.2c0 4-6 3-12 6"/></svg></div>
+		<h1 class="fx-blur-text">No repositories yet</h1>
+		<p class="fx-shiny">Open an existing Git repository, or clone a new one to get started.</p>
+		<div class="btns">
+			<button id="add" class="primary">Open Repository</button>
+			<button id="clone" class="secondary">Clone</button>
+		</div>
 	</div>
+	<script src="fx.js"></script>
 	<script>
 		document.getElementById('add').addEventListener('click', function () { window.electronAPI.addRepository(); });
 		document.getElementById('clone').addEventListener('click', function () { window.electronAPI.cloneRepository(); });

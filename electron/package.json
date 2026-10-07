@@ -36,6 +36,8 @@
 			"dist/**/*",
 			"index.html",
 			"norepos.html",
+			"theme.css",
+			"fx.js",
 			"panel.js",
 			"sidebar.js",
 			"conflicts.js",

@@ -4,200 +4,209 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Git Graph</title>
-	<link rel="stylesheet" href="theme.css">
+	<link rel="stylesheet" href="ui/nocturne.css">
+	<script src="ui/icons.js"></script>
+	<script src="ui/toast.js"></script>
+	<script src="ui/titlebar.js"></script>
 	<style>
-		html, body{ margin:0; height:100%; }
-		body{ background:var(--bg); color:var(--text); font-family:var(--gg-font-family); font-size:14px; overflow:hidden; }
-		button, input, select{ font:inherit; color:inherit; }
-		.fx-aurora i{ opacity:.22; }
+		html, body { height: 100%; }
+		body { overflow: hidden; font-size: 13px; }
+		button, input { font: inherit; }
 
-		#app{ position:relative; z-index:1; height:100%; display:flex; flex-direction:column; max-width:1320px; margin:0 auto; padding:0 36px; box-sizing:border-box; }
+		#app { position: fixed; top: var(--titlebar-h, 0px); left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; }
+		.hub-wrap { width: 100%; max-width: 1360px; margin: 0 auto; padding: 0 44px; }
 
 		/* header */
-		.top{ display:flex; align-items:center; justify-content:space-between; gap:20px; padding:30px 0 22px; animation:fx-rise .5s var(--ease) both; }
-		.brand{ display:flex; align-items:center; gap:14px; }
-		.logo{ width:44px; height:44px; border-radius:13px; background:var(--grad); display:grid; place-items:center; box-shadow:0 8px 30px rgba(124,140,255,.45); }
-		.logo svg{ width:23px; height:23px; fill:none; stroke:#0b0d12; stroke-width:2.2; stroke-linecap:round; }
-		.brand h1{ margin:0; font-size:21px; font-weight:700; letter-spacing:-.02em; }
-		.brand span{ color:var(--muted); font-size:12.5px; }
-		.actions{ display:flex; gap:8px; }
-		.btn{
-			display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 14px; border-radius:10px; cursor:pointer;
-			background:rgba(255,255,255,.06); border:1px solid var(--line-strong); font-weight:600; font-size:13px;
-			transition:transform .2s var(--ease), background .2s, border-color .2s, box-shadow .25s;
-		}
-		.btn svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-		.btn:hover{ background:rgba(255,255,255,.1); border-color:rgba(124,140,255,.5); transform:translateY(-1px); }
-		.btn:active{ transform:scale(.97); }
-		.btn.primary{ position:relative; overflow:hidden; background:var(--grad); color:#0b0d12; border:0; }
-		.btn.primary::after{ content:""; position:absolute; top:0; bottom:0; width:40%; left:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation:fx-sweep 3.4s ease-in-out infinite; }
-		.btn.primary:hover{ box-shadow:0 10px 30px rgba(124,140,255,.5); filter:brightness(1.06); }
-		.btn:disabled{ opacity:.55; cursor:default; transform:none; }
+		.hub-head { display: flex; align-items: center; gap: var(--space-6); padding-top: 10px; flex-wrap: wrap; }
+		.hub-title { display: flex; align-items: baseline; gap: var(--space-6); flex: 1; min-width: 0; }
+		.hub-title h2 { font-size: 28px; margin: 0; letter-spacing: -0.02em; }
+		.hub-stats { color: var(--color-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.hub-stats b { color: var(--color-text); font-weight: 500; font-variant-numeric: tabular-nums; }
+		.hub-actions { display: flex; gap: var(--space-3); }
+		.hub-actions .btn { height: 30px; }
 
 		/* toolbar */
-		.toolbar{ display:flex; align-items:center; gap:14px; padding-bottom:18px; animation:fx-rise .5s .06s var(--ease) both; flex-wrap:wrap; }
-		.search{ position:relative; flex:1 1 280px; max-width:440px; }
-		.search svg{ position:absolute; left:12px; top:50%; transform:translateY(-50%); width:15px; height:15px; fill:none; stroke:var(--muted); stroke-width:2; stroke-linecap:round; pointer-events:none; }
-		.search input{
-			width:100%; box-sizing:border-box; height:38px; padding:0 40px 0 36px; border-radius:11px; outline:none;
-			background:rgba(255,255,255,.05); border:1px solid var(--line-strong); transition:border-color .2s, box-shadow .2s, background .2s;
+		.hub-toolbar { display: flex; align-items: center; gap: var(--space-3); padding: 18px 0 6px; }
+		.hub-search { position: relative; width: 340px; flex: 0 1 340px; }
+		.hub-search > [data-icon] { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--color-muted); pointer-events: none; }
+		.hub-search .input { height: 36px; padding-left: 33px; padding-right: 34px; }
+		.hub-search .kbd { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+		.hub-search .input:focus-visible + .kbd, .hub-search .input:not(:placeholder-shown) + .kbd { display: none; }
+		.hub-toolbar .seg { height: 36px; }
+		.hub-toolbar .seg-opt { padding: 0 12px; font-size: 13px; }
+		.hub-toolbar .seg-opt .n { color: var(--color-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+		.hub-spacer { flex: 1; }
+		#sortBtn { height: 32px; color: var(--color-muted); }
+		#sortBtn:hover { color: var(--color-text); }
+		#sortBtn .caret { width: 11px; height: 11px; }
+
+		/* sections + grid */
+		#scroll { flex: 1; overflow-y: auto; scrollbar-gutter: stable; }
+		#scroll > .hub-wrap { padding-top: 10px; padding-bottom: 28px; }
+		.hub-section { margin-top: 14px; }
+		.hub-section[hidden] { display: none; }
+		.hub-kicker { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px; font-size: 10px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted); }
+		.hub-kicker .n { letter-spacing: 0; font-size: 11px; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+		.hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+
+		/* repo card */
+		.repo { position: relative; gap: 10px; padding: 14px 14px 12px; cursor: pointer; outline: none; min-width: 0;
+			box-shadow: 0 0 0 1px transparent; content-visibility: auto; contain-intrinsic-size: auto 122px;
+			transition: transform 200ms var(--ease), box-shadow 200ms var(--ease); }
+		.repo:hover, .repo:focus-visible, .repo.is-menu {
+			transform: translateY(-2px);
+			box-shadow: 0 0 0 1px var(--color-accent), 0 10px 28px -10px color-mix(in srgb, var(--color-accent) 45%, transparent);
 		}
-		.search input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); background:rgba(255,255,255,.07); }
-		.search kbd{ position:absolute; right:10px; top:50%; transform:translateY(-50%); font:inherit; font-size:11px; color:var(--muted); border:1px solid var(--line-strong); border-radius:5px; padding:0 6px; line-height:18px; }
-		.chips{ display:flex; gap:6px; }
-		.chip{ height:30px; padding:0 12px; border-radius:999px; background:transparent; border:1px solid var(--line); color:var(--muted); cursor:pointer; font-size:12.5px; font-weight:600; transition:all .2s var(--ease); }
-		.chip:hover{ color:var(--text); border-color:var(--line-strong); }
-		.chip.active{ color:#fff; background:var(--accent-soft); border-color:rgba(124,140,255,.5); }
-		.spacer{ flex:1; }
-		#sort{ height:30px; border-radius:9px; background:rgba(255,255,255,.05); border:1px solid var(--line-strong); padding:0 8px; outline:none; cursor:pointer; }
-		#sort option{ background:var(--surface-2); }
-		#stats{ color:var(--muted); font-size:12.5px; white-space:nowrap; }
-		#stats b{ color:var(--text); font-weight:600; font-variant-numeric:tabular-nums; }
+		.repo:focus-visible { box-shadow: 0 0 0 2px var(--color-accent), 0 10px 28px -10px color-mix(in srgb, var(--color-accent) 45%, transparent); }
+		.repo:active { transform: translateY(-1px); }
+		.repo[hidden] { display: none; }
+		.repo.enter { animation: gg-rise 220ms var(--ease) both; animation-delay: calc(var(--i, 0) * 24ms); }
+		.repo-head { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
+		.repo-mono { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-md); background: var(--color-accent-800); color: var(--color-accent-100); font-weight: 500; font-size: 14px; }
+		.repo-names { flex: 1; min-width: 0; }
+		.repo-name { font-size: 15px; font-weight: 500; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.repo-path { font-family: var(--font-mono, ui-monospace, Consolas, monospace); font-size: 11px; color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.repo-tools { display: flex; gap: 2px; align-self: flex-start; margin: -4px -6px 0 0; }
+		.repo-tools .btn-icon { width: 28px; height: 28px; }
+		.repo-tools .btn-icon svg { width: 15px; height: 15px; }
+		.repo-tools .t-more, .repo-tools .t-reveal { opacity: 0; transition: opacity var(--dur) var(--ease); }
+		.repo-tools .t-pin { color: var(--color-faint); }
+		.repo:hover .repo-tools .btn-icon, .repo:focus-within .repo-tools .btn-icon, .repo.is-menu .repo-tools .btn-icon { opacity: 1; }
+		.repo-tools .t-pin:hover { color: var(--color-text); }
+		.repo.is-pinned .t-pin { opacity: 0; color: var(--color-accent); }
+		.repo.is-pinned:hover .t-pin, .repo.is-pinned:focus-within .t-pin, .repo.is-pinned.is-menu .t-pin { opacity: 1; }
+		.repo-tags { display: flex; flex-wrap: wrap; gap: 6px; min-height: 22px; align-items: center; }
+		.repo-tags .tag { height: 22px; font-size: 11.5px; max-width: 100%; white-space: nowrap; }
+		.repo-tags .tag-branch { overflow: hidden; text-overflow: ellipsis; display: inline-block; line-height: 18px; }
+		.repo-tags .tag-branch [data-icon] { margin: -2px 4px 0 0; }
+		.repo-tags .tag [data-icon] { width: 12px; height: 12px; }
+		.repo-last { display: flex; align-items: baseline; gap: var(--space-4); min-height: 19px; font-size: 12.5px; }
+		.repo-last .subject { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: color-mix(in srgb, var(--color-text) 85%, transparent); }
+		.repo-last .subject.none { color: var(--color-muted); }
+		.repo-last .when { flex: none; font-size: 11.5px; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+		.repo.is-missing .repo-mono { background: var(--color-neutral-800); color: var(--color-neutral-400); }
+		.repo.is-missing .repo-name { color: var(--color-muted); }
+		.repo-last .btn-sm { padding: 1px 8px; }
+		.skel-line { display: inline-block; height: 10px; border-radius: 4px; }
 
-		/* grid + cards */
-		#scroll{ flex:1; overflow-y:auto; margin:0 -36px; padding:6px 36px 40px; }
-		#grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
-		.card{
-			position:relative; display:flex; flex-direction:column; gap:12px; padding:16px 16px 14px; border-radius:16px; cursor:pointer; text-align:left;
-			background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025)); border:1px solid var(--line); outline:none;
-			transition:transform .25s var(--ease), border-color .25s, box-shadow .3s, background .3s;
+		/* states */
+		.hub-nomatch { padding: 70px 0; text-align: center; color: var(--color-muted); }
+		.hub-nomatch p { margin-bottom: var(--space-4); }
+		.hub-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px 0 24px; animation: gg-rise 240ms var(--ease); }
+		.hub-empty .mark { width: 48px; height: 48px; border-radius: 12px; margin-bottom: 18px; }
+		.hub-empty .mark [data-icon] { width: 24px; height: 24px; }
+		.hub-empty h2 { font-size: 24px; margin-bottom: 6px; }
+		.hub-empty > p { color: var(--color-muted); max-width: 440px; margin-bottom: 28px; }
+		.hub-start { display: grid; grid-template-columns: repeat(3, 210px); gap: 12px; }
+		.hub-start .card { align-items: flex-start; text-align: left; gap: 10px; padding: 16px; cursor: pointer; border: 0; font: inherit; color: inherit; box-shadow: 0 0 0 1px transparent; transition: transform 200ms var(--ease), box-shadow 200ms var(--ease); }
+		.hub-start .card:hover, .hub-start .card:focus-visible { transform: translateY(-2px); box-shadow: 0 0 0 1px var(--color-accent), 0 10px 28px -10px color-mix(in srgb, var(--color-accent) 45%, transparent); outline: none; }
+		.hub-start .card-title { font-size: 14px; }
+		.hub-start .card-body { font-size: 12px; color: var(--color-muted); opacity: 1; }
+		.hub-foot { flex: none; display: flex; justify-content: center; align-items: center; gap: 6px; padding: 10px 0 14px; font-size: 12px; color: var(--color-muted); }
+		.hub-foot [data-icon] { width: 13px; height: 13px; }
+
+		/* drag & drop */
+		#drop { position: fixed; inset: calc(var(--titlebar-h, 0px) + 10px) 12px 12px; z-index: 300; display: none; place-items: center; text-align: center; pointer-events: none;
+			border-radius: var(--radius-lg); border: 1.5px dashed var(--color-accent); background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+			box-shadow: inset 0 0 60px -20px color-mix(in srgb, var(--color-accent) 40%, transparent); animation: gg-fade 140ms ease; }
+		#drop.show { display: grid; }
+		#drop .gg-glyph { margin: 0 auto 14px; width: 44px; height: 44px; }
+		#drop .gg-glyph [data-icon] { width: 22px; height: 22px; }
+		#drop b { display: block; font-size: 16px; font-weight: 500; }
+		#drop span { color: var(--color-muted); }
+
+		/* dialogs */
+		.dialog { width: min(480px, 100%); }
+		.dialog .field + .field { margin-top: var(--space-2); }
+		.dialog-sub { margin: -4px 0 4px; font-size: 12.5px; color: var(--color-muted); }
+		.pick { display: flex; gap: var(--space-2); }
+		.pick .input { flex: 1; min-width: 0; }
+		.recent-dirs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+		.recent-dirs button { border: 1px solid var(--color-divider); background: transparent; color: var(--color-muted); border-radius: var(--radius-sm); font-size: 11.5px; padding: 1px 7px; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.recent-dirs button:hover { color: var(--color-text); border-color: color-mix(in srgb, var(--color-text) 40%, transparent); }
+		.clone-progress { display: flex; flex-direction: column; gap: 6px; }
+		.clone-progress[hidden] { display: none; }
+		.clone-progress .meta { display: flex; justify-content: space-between; gap: var(--space-4); font-size: 12px; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+		.clone-progress .meta b { color: var(--color-text); font-weight: 500; }
+		.dialog-error { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--color-danger-bg); color: var(--color-danger); font-size: 12.5px; white-space: pre-line; overflow-wrap: anywhere; max-height: 120px; overflow-y: auto; }
+		.dialog-error[hidden] { display: none; }
+		.dialog-error [data-icon] { margin-top: 1px; }
+
+		/* undo toast */
+		.gg-toast .toast-action { margin: -3px -6px -3px var(--space-2); }
+
+		@media (max-width: 900px) {
+			.hub-wrap { padding: 0 20px; }
+			.hub-actions .lbl { display: none; }
+			.hub-start { grid-template-columns: 1fr; width: min(340px, 100%); }
+			.hub-search { flex: 1 1 200px; }
 		}
-		.card.enter{ animation:fx-rise .5s var(--ease) both; animation-delay:calc(var(--i,0) * 45ms); }
-		.card:hover, .card:focus-visible{ transform:translateY(-3px); border-color:rgba(124,140,255,.45); box-shadow:0 18px 44px -12px rgba(0,0,0,.65), 0 0 0 1px rgba(124,140,255,.12); }
-		.card:active{ transform:translateY(-1px) scale(.995); }
-		.card.fx-spot::before{ background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%),rgba(124,140,255,.2),transparent 70%); }
-		.card.missing{ opacity:.75; }
-		.row1{ display:flex; align-items:center; gap:12px; }
-		.mono{ flex:none; width:38px; height:38px; border-radius:11px; display:grid; place-items:center; font-weight:700; font-size:16px; color:#0b0d12; text-transform:uppercase; box-shadow:0 6px 18px -4px rgba(0,0,0,.5); }
-		.names{ min-width:0; flex:1; }
-		.name{ font-weight:650; font-size:15px; letter-spacing:-.01em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-		.path{ color:var(--muted); font-size:11.5px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:Consolas,"Cascadia Mono",monospace; }
-		.tools{ display:flex; gap:2px; opacity:0; transition:opacity .2s; }
-		.card:hover .tools, .card:focus-within .tools, .card.pinned .tools{ opacity:1; }
-		.card:not(:hover):not(:focus-within) .tool:not(.pin){ visibility:hidden; }
-		.tool{ width:28px; height:28px; display:grid; place-items:center; border:0; border-radius:8px; background:transparent; color:var(--muted); cursor:pointer; transition:background .15s, color .15s, transform .2s var(--ease); }
-		.tool svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-		.tool:hover{ background:rgba(255,255,255,.1); color:var(--text); transform:scale(1.1); }
-		.tool.danger:hover{ background:rgba(255,107,129,.18); color:var(--danger); }
-		.tool.pin.on{ color:var(--warn); }
-		.tool.pin.on svg{ fill:var(--warn); animation:pin-pop .4s var(--ease); }
-		@keyframes pin-pop{ 0%{ transform:scale(.6) rotate(-20deg); } 60%{ transform:scale(1.35) rotate(8deg); } 100%{ transform:none; } }
-		.pills{ display:flex; flex-wrap:wrap; gap:6px; min-height:24px; }
-		.pill{ display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 9px; border-radius:999px; font-size:12px; font-weight:600; background:rgba(255,255,255,.07); border:1px solid transparent; white-space:nowrap; max-width:100%; }
-		.pill svg{ width:12px; height:12px; flex:none; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
-		.pill.branch{ color:var(--accent-2); background:rgba(79,209,229,.1); overflow:hidden; text-overflow:ellipsis; }
-		.pill.clean{ color:var(--ok); background:rgba(74,222,128,.1); }
-		.pill.dirty{ color:var(--warn); background:rgba(251,191,36,.12); }
-		.pill.sync{ color:var(--accent); background:var(--accent-soft); }
-		.pill.err{ color:var(--danger); background:rgba(255,107,129,.12); }
-		.last{ color:var(--muted); font-size:12.5px; display:flex; gap:8px; align-items:baseline; min-height:18px; }
-		.last .subject{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; color:#c3c9d8; }
-		.last .when{ flex:none; font-size:11.5px; }
-		.skel{ border-radius:7px; background:linear-gradient(90deg,rgba(255,255,255,.05) 25%,rgba(255,255,255,.12) 50%,rgba(255,255,255,.05) 75%); background-size:200% 100%; animation:fx-shine 1.4s linear infinite; }
-
-		/* empty / hero */
-		#empty{ display:none; flex-direction:column; align-items:center; text-align:center; padding:60px 20px; animation:fx-pop .6s var(--ease); }
-		#empty.show{ display:flex; }
-		#empty h2{ font-size:28px; font-weight:700; letter-spacing:-.02em; margin:0 0 10px; }
-		#empty p{ color:var(--muted); margin:0 0 34px; max-width:460px; line-height:1.6; }
-		.heroCards{ display:grid; grid-template-columns:repeat(3,minmax(0,200px)); gap:14px; }
-		.heroCard{ padding:22px 16px; border-radius:16px; background:rgba(255,255,255,.04); border:1px solid var(--line); cursor:pointer; transition:transform .25s var(--ease), border-color .25s, background .25s; text-align:center; }
-		.heroCard:hover{ transform:translateY(-4px); border-color:rgba(124,140,255,.5); background:rgba(124,140,255,.08); }
-		.heroCard .ic{ width:42px; height:42px; margin:0 auto 12px; border-radius:12px; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent); }
-		.heroCard svg{ width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-		.heroCard b{ display:block; margin-bottom:4px; }
-		.heroCard span{ color:var(--muted); font-size:12px; }
-		.hint{ margin-top:26px; color:var(--muted); font-size:12.5px; }
-		#nomatch{ display:none; text-align:center; color:var(--muted); padding:60px 0; }
-		#nomatch.show{ display:block; }
-
-		/* drag overlay */
-		#drop{ position:fixed; inset:14px; z-index:30; border-radius:22px; display:none; place-items:center; pointer-events:none; text-align:center;
-			border:2px dashed var(--accent); background:rgba(11,13,18,.7); backdrop-filter:blur(8px); font-size:20px; font-weight:600; animation:fx-fade .15s; }
-		#drop.show{ display:grid; }
-		#drop small{ display:block; color:var(--muted); font-size:13px; font-weight:400; margin-top:6px; }
-
-		/* modal */
-		#modalRoot .backdrop{ position:fixed; inset:0; z-index:40; display:grid; place-items:center; background:rgba(5,7,10,.62); backdrop-filter:blur(6px); animation:fx-fade .2s; }
-		.modal{ width:min(520px,92vw); border-radius:18px; padding:24px; background:rgba(23,27,36,.96); border:1px solid var(--line-strong); box-shadow:0 40px 100px rgba(0,0,0,.7); animation:fx-pop .28s var(--ease); }
-		.modal h3{ margin:0 0 4px; font-size:18px; letter-spacing:-.01em; }
-		.modal .sub{ color:var(--muted); font-size:12.5px; margin-bottom:18px; }
-		.field{ margin-bottom:14px; }
-		.field label{ display:block; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:6px; }
-		.field input[type=text]{ width:100%; box-sizing:border-box; height:38px; padding:0 12px; border-radius:10px; outline:none; background:var(--surface-2); border:1px solid var(--line-strong); transition:border-color .2s, box-shadow .2s; }
-		.field input[type=text]:focus{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
-		.pick{ display:flex; gap:8px; }
-		.pick input{ flex:1; }
-		.err{ min-height:18px; color:var(--danger); font-size:12.5px; margin:2px 0 12px; }
-		.foot{ display:flex; justify-content:flex-end; gap:8px; }
-		.spin{ width:14px; height:14px; border-radius:50%; border:2px solid rgba(11,13,18,.3); border-top-color:#0b0d12; animation:spin .7s linear infinite; }
-		@keyframes spin{ to{ transform:rotate(360deg); } }
-
-		/* toasts */
-		#toasts{ position:fixed; left:50%; bottom:26px; transform:translateX(-50%); z-index:60; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; }
-		.toast{ padding:10px 16px; border-radius:12px; background:rgba(23,27,36,.96); border:1px solid var(--line-strong); box-shadow:0 14px 40px rgba(0,0,0,.55); font-size:13px; animation:fx-rise .3s var(--ease); }
-		.toast.bad{ border-color:rgba(255,107,129,.5); color:#ffc2cb; }
-		.toast.good{ border-color:rgba(74,222,128,.4); }
-
-		@media (max-width:760px){ #app{ padding:0 18px; } .heroCards{ grid-template-columns:1fr; } .actions .lbl{ display:none; } }
 	</style>
 </head>
 <body>
-	<div class="fx-aurora"><i></i><i></i><i></i></div>
-
 	<div id="app">
-		<header class="top">
-			<div class="brand">
-				<div class="logo"><svg viewBox="0 0 24 24"><circle cx="6" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M6 7.2v9.6M18 11.2c0 4-6 3-12 6"/></svg></div>
-				<div><h1>Git Graph</h1><span>Your repositories</span></div>
+		<div class="hub-wrap">
+			<header class="hub-head">
+				<div class="hub-title">
+					<h2>Repositories</h2>
+					<span class="hub-stats" id="stats" aria-live="polite"></span>
+				</div>
+				<div class="hub-actions">
+					<button class="btn btn-secondary" id="btnOpen" title="Add a repository that is already on disk"><i data-icon="folder-open"></i><span class="lbl">Open</span></button>
+					<button class="btn btn-secondary" id="btnScan" title="Find every repository inside a folder"><i data-icon="magnifying-glass"></i><span class="lbl">Scan folder</span></button>
+					<button class="btn btn-secondary" id="btnNew" title="Create a new repository"><i data-icon="plus"></i><span class="lbl">New</span></button>
+					<button class="btn btn-primary" id="btnClone" title="Clone a repository from a URL"><i data-icon="download-simple"></i><span class="lbl">Clone</span></button>
+				</div>
+			</header>
+			<div class="hub-toolbar" id="toolbar">
+				<label class="hub-search">
+					<i data-icon="magnifying-glass"></i>
+					<input class="input" id="search" type="text" placeholder="Search repositories" autocomplete="off" spellcheck="false" aria-label="Search repositories">
+					<span class="kbd">/</span>
+				</label>
+				<div class="seg" id="filters" role="radiogroup" aria-label="Filter">
+					<label class="seg-opt"><input type="radio" name="f" value="all" checked>All</label>
+					<label class="seg-opt"><input type="radio" name="f" value="pinned">Pinned</label>
+					<label class="seg-opt"><input type="radio" name="f" value="changes">Changes</label>
+					<label class="seg-opt"><input type="radio" name="f" value="behind">Behind</label>
+				</div>
+				<span class="hub-spacer"></span>
+				<button class="btn btn-secondary btn-sm" id="sortBtn" aria-haspopup="menu" aria-expanded="false" title="Sort"><i data-icon="sort-ascending"></i><span id="sortLabel">Recent</span><i data-icon="caret-down" class="caret"></i></button>
 			</div>
-			<div class="actions">
-				<button class="btn" id="btnOpen" title="Add an existing repository"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="lbl">Open</span></button>
-				<button class="btn" id="btnScan" title="Find all repositories inside a folder"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="lbl">Scan folder</span></button>
-				<button class="btn" id="btnNew" title="Create a new repository"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span class="lbl">New</span></button>
-				<button class="btn primary" id="btnClone" title="Clone a repository from a URL"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg><span class="lbl">Clone</span></button>
-			</div>
-		</header>
-
-		<section class="toolbar" id="toolbar">
-			<label class="search">
-				<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-				<input id="search" type="text" placeholder="Search repositories" autocomplete="off" spellcheck="false">
-				<kbd>/</kbd>
-			</label>
-			<div class="chips" id="chips">
-				<button class="chip active" data-f="all">All</button>
-				<button class="chip" data-f="pinned">Pinned</button>
-				<button class="chip" data-f="changes">Changes</button>
-				<button class="chip" data-f="behind">Behind</button>
-			</div>
-			<span class="spacer"></span>
-			<span id="stats"></span>
-			<select id="sort" title="Sort"><option value="recent">Recent</option><option value="name">Name</option></select>
-		</section>
+		</div>
 
 		<div id="scroll">
-			<main id="grid"></main>
-			<div id="nomatch">No repositories match your search.</div>
-			<section id="empty">
-				<div class="logo" style="width:64px;height:64px;border-radius:19px;margin-bottom:22px"><svg viewBox="0 0 24 24" style="width:32px;height:32px"><circle cx="6" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="9" r="2.2"/><path d="M6 7.2v9.6M18 11.2c0 4-6 3-12 6"/></svg></div>
-				<h2>Welcome to Git Graph</h2>
-				<p>Add your first repository to see its commit graph, stage changes, and resolve conflicts - all in one place.</p>
-				<div class="heroCards">
-					<div class="heroCard" id="heroClone"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></div><b>Clone</b><span>From GitHub, GitLab or any URL</span></div>
-					<div class="heroCard" id="heroOpen"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div><b>Open</b><span>A repository already on disk</span></div>
-					<div class="heroCard" id="heroNew"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><b>New</b><span>Start a fresh repository</span></div>
+			<div class="hub-wrap">
+				<section class="hub-section" id="secPinned" hidden>
+					<h3 class="hub-kicker">Pinned <span class="n"></span></h3>
+					<div class="hub-grid" role="list"></div>
+				</section>
+				<section class="hub-section" id="secRecent" hidden>
+					<h3 class="hub-kicker"><span class="lbl">Recent</span> <span class="n"></span></h3>
+					<div class="hub-grid" role="list"></div>
+				</section>
+				<div class="hub-nomatch" id="nomatch" hidden>
+					<p id="nomatchText">No repositories match.</p>
+					<button class="btn btn-secondary btn-sm" id="clearFilters">Clear search and filters</button>
 				</div>
-				<div class="hint">Tip: drag a folder onto this window to add it.</div>
-			</section>
+				<section class="hub-empty" id="empty" hidden>
+					<span class="gg-titlebar-mark mark"><i data-icon="git-branch"></i></span>
+					<h2>Welcome to Git Graph</h2>
+					<p>Add a repository to see its commit graph, stage and commit changes, and resolve conflicts - all in one place.</p>
+					<div class="hub-start">
+						<button class="card" id="startClone"><span class="gg-glyph"><i data-icon="download-simple"></i></span><span class="card-title">Clone</span><span class="card-body">From GitHub, GitLab or any Git URL</span></button>
+						<button class="card" id="startOpen"><span class="gg-glyph"><i data-icon="folder-open"></i></span><span class="card-title">Open</span><span class="card-body">A repository that is already on disk</span></button>
+						<button class="card" id="startNew"><span class="gg-glyph"><i data-icon="folder-plus"></i></span><span class="card-title">New</span><span class="card-body">Start a fresh, empty repository</span></button>
+					</div>
+				</section>
+			</div>
 		</div>
+
+		<footer class="hub-foot" id="foot"><i data-icon="folder-plus"></i>Drop a folder anywhere to add it &middot; <span class="kbd">/</span> search</footer>
 	</div>
 
-	<div id="drop"><div>Drop a folder to add it<small>Repositories inside it are found automatically</small></div></div>
-	<div id="modalRoot"></div>
-	<div id="toasts"></div>
+	<div id="drop" aria-hidden="true"><div><span class="gg-glyph"><i data-icon="folder-plus"></i></span><b>Drop to add</b><span>Repositories inside the folder are found automatically</span></div></div>
 
-	<script src="fx.js"></script>
 	<script src="home.js"></script>
 </body>
 </html>

@@ -97,26 +97,45 @@ export class Store {
 	}
 
 	private load(): { [key: string]: any } {
+		let text: string;
 		try {
-			return JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
+			text = fs.readFileSync(this.filePath, 'utf8');
 		} catch (_) {
-			return {};
+			return {}; // first run
 		}
+		try {
+			const parsed = JSON.parse(text);
+			if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+		} catch (_) { }
+		// Corrupt (e.g. truncated) state: keep a copy for recovery instead of silently overwriting it on the next save.
+		try { fs.copyFileSync(this.filePath, this.filePath + '.corrupt-' + Date.now()); } catch (_) { }
+		return {};
 	}
 
 	private get<T>(key: string, defaultValue: T): T {
-		return typeof this.data[key] === 'undefined' ? defaultValue : this.data[key];
+		const value = this.data[key];
+		if (typeof value === 'undefined') return defaultValue;
+		// Ignore values of the wrong shape (hand-edited / damaged state) rather than crashing on them later.
+		if (defaultValue !== null && (typeof value !== typeof defaultValue || Array.isArray(value) !== Array.isArray(defaultValue) || value === null)) return defaultValue;
+		return value;
 	}
+
+	private writeQueue: Promise<ErrorInfo> = Promise.resolve(null);
 
 	private set(key: string, value: any): Promise<ErrorInfo> {
 		this.data[key] = value;
-		return new Promise((resolve) => {
+		// Serialise the writes and replace the file atomically: overlapping fs.writeFile calls on the same
+		// file (several state changes in quick succession) could otherwise interleave and corrupt it.
+		this.writeQueue = this.writeQueue.then(() => new Promise<ErrorInfo>((resolve) => {
+			const tmp = this.filePath + '.tmp';
 			fs.mkdir(this.userDataPath, { recursive: true }, () => {
-				fs.writeFile(this.filePath, JSON.stringify(this.data, null, '\t'), (err) => {
-					resolve(err ? 'Unable to save the Git Graph application state.' : null);
+				fs.writeFile(tmp, JSON.stringify(this.data, null, '\t'), (err) => {
+					if (err) return resolve('Unable to save the Git Graph application state.');
+					fs.rename(tmp, this.filePath, (err) => resolve(err ? 'Unable to save the Git Graph application state.' : null));
 				});
 			});
-		});
+		}));
+		return this.writeQueue;
 	}
 
 

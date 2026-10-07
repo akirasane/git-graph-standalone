@@ -6,6 +6,8 @@ interface HomeData {
 	lastOpened: { [repo: string]: number };
 	lastCloneDir: string | null;
 	lastNewRepoDir: string | null;
+	/** Most recent first, at most 5. */
+	recentCloneDirs: string[];
 }
 
 /**
@@ -18,7 +20,7 @@ export class HomeStore {
 
 	constructor(userDataPath: string) {
 		this.filePath = path.join(userDataPath, 'home.json');
-		this.data = { pinned: [], lastOpened: {}, lastCloneDir: null, lastNewRepoDir: null };
+		this.data = { pinned: [], lastOpened: {}, lastCloneDir: null, lastNewRepoDir: null, recentCloneDirs: [] };
 		try {
 			const parsed = JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
 			if (parsed && typeof parsed === 'object') {
@@ -57,7 +59,12 @@ export class HomeStore {
 	}
 
 	public get lastCloneDir() { return this.data.lastCloneDir; }
-	public set lastCloneDir(dir: string | null) { this.data.lastCloneDir = dir; this.save(); }
+	public set lastCloneDir(dir: string | null) {
+		this.data.lastCloneDir = dir;
+		if (dir !== null) this.data.recentCloneDirs = [dir].concat((this.data.recentCloneDirs || []).filter((d) => d !== dir)).slice(0, 5);
+		this.save();
+	}
+	public get recentCloneDirs() { return (this.data.recentCloneDirs || []).slice(); }
 	public get lastNewRepoDir() { return this.data.lastNewRepoDir; }
 	public set lastNewRepoDir(dir: string | null) { this.data.lastNewRepoDir = dir; this.save(); }
 }

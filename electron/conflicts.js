@@ -1,6 +1,6 @@
-// Merge-conflict resolution: a status block at the top of the sidebar (#sbConflicts) listing
-// conflicted files with Continue/Abort(/Skip) for the in-progress operation, and a full-window
-// 3-pane-style editor overlay (ours | theirs | editable output) per file. Isolated from
+// Merge-conflict resolution: a banner at the top of the sidebar (#sbConflicts) listing
+// conflicted files with Continue / Abort (/ Skip) for the in-progress operation, and a full-window
+// editor overlay per file (ours | theirs per hunk, plus an editable output). Isolated from
 // media/out.min.js like panel.js/sidebar.js (own API handle + listener, no getState/setState).
 (function () {
 	'use strict';
@@ -9,10 +9,13 @@
 	var state = { operation: null, files: [] };
 	var editor = null; // { repo, filePath, eol, segments, manual }
 	var els = {};
-	var pollTimer = null;
+	var lastBlockHtml = null;
+	var lastOp = null;
 
 	function post(msg) { api.postMessage(msg); }
 	function currentRepo() { return (window.gitGraph && window.gitGraph.currentRepo) || null; }
+	function toast(text, kind) { if (window.GG && GG.toast) GG.toast(text, kind); }
+	function confirmBox(opts) { return window.GG && GG.confirm ? GG.confirm(opts) : Promise.resolve(window.confirm(opts.message || opts.title)); }
 	function esc(s) {
 		return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 	}
@@ -22,30 +25,34 @@
 		if (repo !== null) post({ command: 'getConflicts', repo: repo });
 	}
 
-	/* ---------- sidebar block ---------- */
+	/* ---------- sidebar banner ---------- */
 
-	var OP_LABEL = { merge: 'Merge', rebase: 'Rebase', 'cherry-pick': 'Cherry-pick', revert: 'Revert' };
+	var OP_LABEL = { merge: 'Merge', rebase: 'Rebase', 'cherry-pick': 'Cherry-pick', revert: 'Revert', resolve: 'Conflict resolution' };
 
 	function renderBlock() {
 		if (state.operation === null) {
-			els.block.style.display = 'none';
+			els.block.hidden = true;
 			els.block.innerHTML = '';
+			lastBlockHtml = null;
 			return;
 		}
 		var op = state.operation;
 		var n = state.files.length;
-		els.block.style.display = '';
-		els.block.innerHTML =
-			'<div class="cfTitle">&#9888; ' + esc(OP_LABEL[op]) + ' in progress</div>' +
-			'<div class="cfSub">' + (n === 0 ? 'All conflicts resolved.' : n + ' conflicted file' + (n === 1 ? '' : 's') + ':') + '</div>' +
-			'<ul class="cfList">' + state.files.map(function (f, i) {
-				return '<li class="cfFile" data-index="' + i + '" title="Click to resolve: ' + esc(f) + '">' + esc(f) + '</li>';
-			}).join('') + '</ul>' +
+		var html =
+			'<div class="cfTitle"><i data-icon="warning"></i>' + esc(OP_LABEL[op] || op) + ' in progress</div>' +
+			'<div class="cfSub">' + (n === 0 ? 'All conflicts resolved - continue to finish.' : n + ' conflicted file' + (n === 1 ? '' : 's') + '. Click one to resolve it.') + '</div>' +
+			(n > 0 ? '<ul class="cfList">' + state.files.map(function (f, i) {
+				return '<li class="cfFile" tabindex="0" role="button" data-index="' + i + '" title="Resolve ' + esc(f) + '"><i data-icon="file-text"></i><span class="shPath"><span class="base">' + esc(f) + '</span></span></li>';
+			}).join('') + '</ul>' : '') +
 			'<div class="cfButtons">' +
-			'<button type="button" class="wcSmallBtn" data-act="continue"' + (n > 0 ? ' disabled title="Resolve all conflicts first"' : '') + '>Continue</button>' +
-			(op === 'rebase' ? '<button type="button" class="wcSmallBtn" data-act="skip">Skip</button>' : '') +
-			'<button type="button" class="wcSmallBtn" data-act="abort">Abort</button></div>' +
+			'<button type="button" class="btn btn-primary btn-sm" data-act="continue"' + (n > 0 ? ' disabled title="Resolve all conflicts first"' : ' title="Commit the resolution and continue the ' + esc(op) + '"') + '>Continue</button>' +
+			(op === 'rebase' || op === 'cherry-pick' || op === 'revert' ? '<button type="button" class="btn btn-secondary btn-sm" data-act="skip" title="Skip this commit">Skip</button>' : '') +
+			'<button type="button" class="btn btn-danger btn-sm" data-act="abort" title="Abort the ' + esc(op) + ' and restore the previous state">Abort</button></div>' +
 			'<div class="cfMessage" id="cfMessage"></div>';
+		els.block.hidden = false;
+		if (html === lastBlockHtml) return; // polled every few seconds: keep focus / hover stable
+		lastBlockHtml = html;
+		els.block.innerHTML = html;
 	}
 
 	function showBlockMessage(text) {
@@ -109,32 +116,45 @@
 
 	/* ---------- overlay editor ---------- */
 
+	var CHOICES = [['ours', 'Ours'], ['theirs', 'Theirs'], ['both', 'Both', 'Ours first, then theirs'], ['both-rev', 'Both (reversed)', 'Theirs first, then ours'], ['none', 'Neither']];
+
 	function hunkHtml(seg, idx) {
-		function pane(title, lines, cls) {
-			return '<div class="cfPane ' + cls + '"><div class="cfPaneTitle">' + esc(title) + '</div><pre>' + (lines.length ? esc(lines.join('\n')) : '<i>(empty)</i>') + '</pre></div>';
+		function pane(kind, label, lines) {
+			return '<div class="cfPane cf' + kind + '"><div class="cfPaneTitle"><span class="shKicker">' + kind + '</span><span class="text-muted" style="font-size:12px">' + esc(label) + '</span></div>' +
+				'<pre>' + (lines.length ? esc(lines.join('\n')) : '<i>(empty)</i>') + '</pre></div>';
 		}
-		function btn(choice, label) {
-			return '<button type="button" class="wcSmallBtn' + (seg.choice === choice ? ' cfActive' : '') + '" data-hunk="' + idx + '" data-choice="' + choice + '">' + label + '</button>';
-		}
+		var seg$ = '<div class="seg" role="radiogroup" aria-label="Resolution for conflict ' + (idx + 1) + '">' + CHOICES.map(function (c) {
+			return '<label class="seg-opt"' + (c[2] ? ' title="' + c[2] + '"' : '') + '><input type="radio" name="cfHunk' + idx + '" data-hunk="' + idx + '" value="' + c[0] + '"' + (seg.choice === c[0] ? ' checked' : '') + '>' + c[1] + '</label>';
+		}).join('') + '</div>';
 		return '<div class="cfHunk' + (seg.choice === null ? ' cfOpen' : '') + '">' +
-			'<div class="cfHunkHead">Conflict ' + (idx + 1) + '<span class="cfChoices">' +
-			btn('ours', 'Use ours') + btn('theirs', 'Use theirs') + btn('both', 'Both (ours first)') + btn('both-rev', 'Both (theirs first)') + btn('none', 'Neither') +
-			'</span></div><div class="cfPanes">' +
-			pane('Ours: ' + seg.oursLabel, seg.ours, 'cfOurs') + pane('Theirs: ' + seg.theirsLabel, seg.theirs, 'cfTheirs') +
-			'</div></div>';
+			'<div class="cfHunkHead"><b>Conflict ' + (idx + 1) + '</b>' +
+			(seg.choice === null ? '<span class="tag tag-warning">Unresolved</span>' : '<span class="tag tag-success">Resolved</span>') + seg$ + '</div>' +
+			'<div class="cfPanes">' + pane('Ours', seg.oursLabel, seg.ours) + pane('Theirs', seg.theirsLabel, seg.theirs) + '</div></div>';
 	}
 
 	function refreshEditorStatus() {
+		var total = conflictSegments().length;
 		var left = unresolvedCount();
-		document.getElementById('cfStatus').textContent = left === 0 ? 'All conflicts in this file resolved.' : left + ' conflict(s) still unresolved.';
+		var st = document.getElementById('cfStatus');
+		st.className = total === 0 ? '' : 'tag ' + (left === 0 ? 'tag-success' : 'tag-warning');
+		st.textContent = total === 0 ? '' : left === 0 ? 'All resolved' : left + ' of ' + total + ' unresolved';
+	}
+
+	function setTitle(filePath) {
+		var i = filePath.lastIndexOf('/');
+		document.getElementById('cfEditorTitle').innerHTML = (i === -1 ? '' : '<span class="dir">' + esc(filePath.substring(0, i + 1)) + '</span>') + esc(filePath.substring(i + 1));
+		document.getElementById('cfEditorTitle').title = filePath;
 	}
 
 	function renderEditor() {
 		var hunks = conflictSegments();
 		var body = document.getElementById('cfEditorBody');
-		document.getElementById('cfEditorTitle').textContent = editor.filePath;
-		body.innerHTML = '<div class="cfHunks">' + (hunks.length ? hunks.map(hunkHtml).join('') : '<div class="cfNote">No conflict markers found in this file (e.g. modify/delete or binary conflict). Pick a side for the whole file:</div>') + '</div>' +
-			'<div class="cfOutputWrap"><div class="cfPaneTitle">Output (editable)</div><textarea id="cfOutput" spellcheck="false"></textarea></div>';
+		var scroll = body.querySelector('.cfHunks') ? body.querySelector('.cfHunks').scrollTop : 0;
+		setTitle(editor.filePath);
+		body.innerHTML = '<div class="cfHunks">' + (hunks.length ? hunks.map(hunkHtml).join('')
+			: '<div class="cfNote">No conflict markers found in this file (for example a modify/delete or binary conflict). Use <b>Whole file: Use ours / Use theirs</b> above, or edit the output below.</div>') + '</div>' +
+			'<div class="cfOutputWrap"><span class="shKicker">Output (editable)</span><textarea id="cfOutput" spellcheck="false" aria-label="Resolved output"></textarea></div>';
+		body.querySelector('.cfHunks').scrollTop = scroll;
 		var out = document.getElementById('cfOutput');
 		out.value = buildOutput();
 		out.addEventListener('input', function () { editor.manual = true; });
@@ -144,27 +164,41 @@
 	function openEditor(filePath) {
 		var repo = currentRepo();
 		if (repo === null) return;
-		editor = { repo: repo, filePath: filePath, eol: '\n', segments: [], manual: false };
+		editor = { repo: repo, filePath: filePath, eol: '\n', segments: [], manual: false, opener: document.activeElement };
 		els.overlay.style.display = 'flex';
-		document.getElementById('cfEditorTitle').textContent = filePath;
-		document.getElementById('cfEditorBody').innerHTML = '<div class="cfNote">Loading...</div>';
+		setTitle(filePath);
+		document.getElementById('cfStatus').textContent = '';
+		document.getElementById('cfStatus').className = '';
+		document.getElementById('cfEditorBody').innerHTML = '<div class="shSkel" style="padding:16px"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>';
+		document.getElementById('cfSaveBtn').focus();
 		post({ command: 'getConflictFile', repo: repo, filePath: filePath });
 	}
 
 	function closeEditor() {
+		var opener = editor && editor.opener;
 		editor = null;
 		els.overlay.style.display = 'none';
+		if (opener && document.body.contains(opener)) opener.focus();
 	}
 
 	function saveEditor() {
 		var out = document.getElementById('cfOutput');
 		if (!editor || !out) return;
 		var text = out.value;
-		if (/^(<<<<<<<|=======$|>>>>>>>)/m.test(text) &&
-			!window.confirm('The output still contains conflict markers. Save and mark resolved anyway?')) return;
-		post({
-			command: 'saveConflictFile', repo: editor.repo, filePath: editor.filePath,
-			content: editor.eol === '\r\n' ? text.replace(/\r?\n/g, '\r\n') : text
+		var hasMarkers = /^(<<<<<<<|=======$|>>>>>>>)/m.test(text);
+		(hasMarkers ? confirmBox({ title: 'Conflict markers left', message: 'The output still contains conflict markers. Save it and mark the file resolved anyway?', confirm: 'Save anyway' }) : Promise.resolve(true)).then(function (ok) {
+			if (!ok || !editor) return;
+			post({
+				command: 'saveConflictFile', repo: editor.repo, filePath: editor.filePath,
+				content: editor.eol === '\r\n' ? text.replace(/\r?\n/g, '\r\n') : text
+			});
+		});
+	}
+
+	function takeSide(side) {
+		if (!editor) return;
+		confirmBox({ title: 'Use ' + (side === 'ours' ? 'our' : 'their') + ' version', message: 'Resolve the whole of "' + editor.filePath + '" with ' + (side === 'ours' ? 'our' : 'their') + ' version?', confirm: 'Use ' + side }).then(function (ok) {
+			if (ok && editor) post({ command: 'resolveConflictSide', repo: editor.repo, filePath: editor.filePath, side: side });
 		});
 	}
 
@@ -179,29 +213,37 @@
 			if (!btn || btn.disabled) return;
 			var repo = currentRepo();
 			var act = btn.getAttribute('data-act');
-			if (repo === null || state.operation === null) return;
-			if (act === 'abort' && !window.confirm('Abort the ' + state.operation + ' and discard its progress?')) return;
-			post({ command: 'conflictOperation', repo: repo, operation: state.operation, action: act });
+			var op = state.operation;
+			if (repo === null || op === null) return;
+			(act === 'abort' ? confirmBox({ title: 'Abort ' + (OP_LABEL[op] || op).toLowerCase(), message: 'Abort the ' + op + ' and discard its progress?', confirm: 'Abort', danger: true }) : Promise.resolve(true)).then(function (ok) {
+				if (!ok) return;
+				lastOp = op;
+				post({ command: 'conflictOperation', repo: repo, operation: op, action: act });
+			});
+		});
+		els.block.addEventListener('keydown', function (e) {
+			if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('cfFile')) { e.preventDefault(); e.target.click(); }
 		});
 
 		document.getElementById('cfCloseBtn').addEventListener('click', closeEditor);
 		document.getElementById('cfSaveBtn').addEventListener('click', saveEditor);
-		document.getElementById('cfTakeOursBtn').addEventListener('click', function () {
-			if (editor && window.confirm('Take OUR version of the whole file?')) post({ command: 'resolveConflictSide', repo: editor.repo, filePath: editor.filePath, side: 'ours' });
+		document.getElementById('cfTakeOursBtn').addEventListener('click', function () { takeSide('ours'); });
+		document.getElementById('cfTakeTheirsBtn').addEventListener('click', function () { takeSide('theirs'); });
+		document.getElementById('cfEditorBody').addEventListener('change', function (e) {
+			var input = e.target.closest('input[data-hunk]');
+			if (!input || !editor) return;
+			var seg = conflictSegments()[parseInt(input.getAttribute('data-hunk'), 10)];
+			(editor.manual ? confirmBox({ title: 'Replace your edits?', message: 'Choosing a side rebuilds the output and replaces your manual edits.', confirm: 'Replace' }) : Promise.resolve(true)).then(function (ok) {
+				if (!editor) return;
+				if (ok) { seg.choice = input.value; editor.manual = false; }
+				renderEditor();
+			});
 		});
-		document.getElementById('cfTakeTheirsBtn').addEventListener('click', function () {
-			if (editor && window.confirm('Take THEIR version of the whole file?')) post({ command: 'resolveConflictSide', repo: editor.repo, filePath: editor.filePath, side: 'theirs' });
+		document.addEventListener('keydown', function (e) {
+			if (!editor) return;
+			if (e.key === 'Escape') closeEditor();
+			else if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveEditor(); }
 		});
-		document.getElementById('cfEditorBody').addEventListener('click', function (e) {
-			var btn = e.target.closest('button[data-hunk]');
-			if (!btn || !editor) return;
-			if (editor.manual && !window.confirm('This replaces your manual edits to the output. Continue?')) return;
-			var seg = conflictSegments()[parseInt(btn.getAttribute('data-hunk'), 10)];
-			seg.choice = btn.getAttribute('data-choice');
-			editor.manual = false;
-			renderEditor();
-		});
-		document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && editor) closeEditor(); });
 
 		window.addEventListener('message', function (event) {
 			var msg = event.data;
@@ -228,13 +270,15 @@
 					break;
 				case 'saveConflictFile':
 				case 'resolveConflictSide':
-					if (msg.error) { window.alert('Unable to resolve file: ' + msg.error); return; }
+					if (msg.error) { toast('Unable to resolve the file\n' + msg.error, 'error'); return; }
+					toast('Marked ' + msg.filePath + ' as resolved', 'success');
 					closeEditor();
 					poll();
 					if (window.gitGraph) window.gitGraph.refresh(false);
 					break;
 				case 'conflictOperation':
-					if (msg.error) { showBlockMessage(msg.error); window.alert('Unable to ' + msg.action + ': ' + msg.error); }
+					if (msg.error) { showBlockMessage(msg.error); toast('Unable to ' + msg.action + '\n' + msg.error, 'error'); }
+					else toast(msg.action === 'skip' ? 'Skipped the commit' : (OP_LABEL[lastOp] || 'Operation') + (msg.action === 'abort' ? ' aborted' : lastOp === 'rebase' ? ' continued' : ' completed'), 'success');
 					poll();
 					if (window.gitGraph) window.gitGraph.refresh(false);
 					break;
@@ -243,7 +287,7 @@
 
 		// Conflicts are created by operations that fail from the main frontend's point of view
 		// (so it never refreshes), hence the light polling + focus check.
-		pollTimer = setInterval(function () { if (!document.hidden) poll(); }, 4000);
+		setInterval(function () { if (!document.hidden) poll(); }, 4000);
 		window.addEventListener('focus', poll);
 		setTimeout(poll, 1500);
 	}

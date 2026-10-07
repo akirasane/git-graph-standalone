@@ -226,6 +226,50 @@ textarea.input { min-height: 72px; resize: vertical; }
 .gg-ref { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; border: 1px solid var(--color-divider); color: var(--color-text); }
 .gg-ref [data-icon] { width: 12px; height: 12px; color: var(--color-accent); }
 
-/* Window chrome (custom title bar; drag region) */
-.gg-titlebar { height: 36px; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4); -webkit-app-region: drag; user-select: none; flex: none; }
+/* --- Window chrome: title bar, in-app menu, popup menus (ui/titlebar.js) ---
+ * titlebar.js injects a fixed 36px .gg-titlebar into the main window's pages and sets
+ * `--titlebar-h: 36px` on :root; page layouts offset with `var(--titlebar-h, 0px)`.
+ * --gg-wco-left/right reserve room for the native window controls (macOS traffic lights / Windows buttons). */
+.gg-titlebar { height: 36px; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-4); -webkit-app-region: drag; user-select: none; flex: none; font-size: 12.5px; }
 .gg-titlebar button, .gg-titlebar input, .gg-titlebar a { -webkit-app-region: no-drag; }
+.gg-titlebar-fixed { position: fixed; top: 0; left: 0; right: 0; z-index: 900; background: var(--color-bg);
+	padding-left: calc(var(--gg-wco-left, 0px) + 8px); padding-right: calc(var(--gg-wco-right, 0px) + var(--space-4)); }
+.gg-titlebar-app { display: inline-flex; align-items: center; gap: var(--space-3); height: 28px; padding: 0 var(--space-2) 0 4px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-muted); font: inherit; cursor: default; min-width: 0; transition: background var(--dur) var(--ease); }
+.gg-titlebar-app:hover, .gg-titlebar-app[aria-expanded="true"] { background: var(--color-hover); }
+.gg-titlebar-mark { width: 20px; height: 20px; flex: none; display: grid; place-items: center; border-radius: 6px; color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 10%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 55%, transparent); }
+.gg-titlebar-mark [data-icon] { width: 13px; height: 13px; }
+.gg-titlebar-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-muted); }
+.gg-titlebar-title b { color: var(--color-text); font-weight: 500; }
+.gg-titlebar-caret { width: 10px !important; height: 10px !important; color: var(--color-faint); }
+.gg-titlebar-close { margin-left: auto; }
+
+/* Popup menu behaviour on top of .gg-menu (GG.menu in titlebar.js: app menu, context menus, dropdowns) */
+.gg-menu.gg-menu-popup { position: fixed; z-index: 1000; max-height: calc(100vh - 16px); overflow-y: auto; outline: none; }
+.gg-menu-item { min-height: 28px; user-select: none; }
+.gg-menu-item.is-active { background: var(--color-hover); }
+.gg-menu-item[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+.gg-menu-item.danger [data-icon] { color: var(--color-danger); }
+.gg-menu-item .gg-menu-check { margin-left: auto; color: var(--color-accent); }
+.gg-menu-heading { padding: var(--space-2) var(--space-3) 2px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted); }
+
+/* Status glyph tile (dialogs, empty states): status colour as icon + 14% tint, never a flood */
+.gg-glyph { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-md); color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+.gg-glyph [data-icon] { width: 18px; height: 18px; }
+.gg-glyph-success { color: var(--color-success); background: var(--color-success-bg); }
+.gg-glyph-warning { color: var(--color-warning); background: var(--color-warning-bg); }
+.gg-glyph-danger { color: var(--color-danger); background: var(--color-danger-bg); }
+
+/* Determinate progress bar (clone, update download): accent line on a quiet track */
+.gg-progress { height: 4px; border-radius: 999px; overflow: hidden; background: var(--color-hover); }
+.gg-progress > span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--color-accent); box-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 60%, transparent); transition: width 240ms var(--ease); }
+.gg-progress.is-indeterminate > span { width: 30%; animation: gg-progress-slide 1.2s var(--ease) infinite; }
+@keyframes gg-progress-slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+
+/* Inline field validation */
+.field-error { margin-top: 4px; font-size: 12px; color: var(--color-danger); }
+.field-error:empty { display: none; }
+.field-hint { margin-top: 4px; font-size: 12px; color: var(--color-muted); overflow-wrap: anywhere; }
+.input[aria-invalid="true"] { border-color: color-mix(in srgb, var(--color-danger) 70%, transparent); }
+
+/* --- Graph shell additions (sidebar / working copy / conflict editor) --- */
+:root { --font-mono: ui-monospace, "Cascadia Code", "Cascadia Mono", Consolas, "SF Mono", monospace; }   /* code panes, diff/output editors */

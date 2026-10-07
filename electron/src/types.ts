@@ -78,7 +78,9 @@ export const enum GitFileStatus {
 	Modified = 'M',
 	Deleted = 'D',
 	Renamed = 'R',
-	Untracked = 'U'
+	Untracked = 'U',
+	/** Unmerged (has unresolved conflicts) - only reported by the Working Copy panel's unstaged list. */
+	Conflicted = 'C'
 }
 
 export const enum GitPushBranchMode {
@@ -688,7 +690,8 @@ export interface ResponseUnstageFile extends ResponseWithErrorInfo {
 	readonly command: 'unstageFile';
 }
 
-export type ConflictOperation = 'merge' | 'rebase' | 'cherry-pick' | 'revert';
+/** `resolve`: conflicted files without an operation to continue (e.g. after a conflicting stash apply/pop or squash merge). */
+export type ConflictOperation = 'merge' | 'rebase' | 'cherry-pick' | 'revert' | 'resolve';
 
 export interface RequestGetConflicts extends RepoRequest {
 	readonly command: 'getConflicts';
@@ -1036,9 +1039,12 @@ export interface RequestFetch extends RepoRequest {
 	readonly name: string | null; // null => Fetch all remotes
 	readonly prune: boolean;
 	readonly pruneTags: boolean;
+	/** Set by the sidebar's Fetch button, which reports the result itself (the graph view then only refreshes). */
+	readonly source?: 'sidebar';
 }
 export interface ResponseFetch extends ResponseWithErrorInfo {
 	readonly command: 'fetch';
+	readonly source?: 'sidebar';
 }
 
 export interface RequestFetchAvatar extends RepoRequest {

@@ -1,13 +1,22 @@
+/* Context menus: Nocturne .gg-menu language */
+
 .contextMenu{
 	display:block;
 	position:absolute;
-	background-color:var(--gg-menu-background);
-	box-shadow:0 1px 4px 1px var(--gg-widget-shadow);
-	color:var(--gg-menu-foreground);
-	list-style-type:none;
+	min-width:200px;
+	max-width:360px;
+	box-sizing:border-box;
 	margin:0;
-	padding:4px 0;
+	padding:4px;
+	list-style-type:none;
+	background-color:var(--color-surface);
+	border-radius:var(--radius-md);
+	box-shadow:var(--shadow-md);
+	color:var(--color-text);
+	font-size:13px;
+	line-height:18px;
 	z-index:10;
+	animation:gg-pop 140ms var(--ease);
 	-webkit-user-select:none;
 	user-select:none;
 }
@@ -19,42 +28,48 @@
 }
 
 .contextMenu li.contextMenuItem{
-	padding:6px 20px;
+	position:relative;
+	padding:6px 12px;
+	border-radius:var(--radius-sm);
+	white-space:nowrap;
+	overflow:hidden;
+	text-overflow:ellipsis;
 }
-
 .contextMenu li.contextMenuItem:hover{
-	background-color:var(--gg-menu-selectionBackground, var(--gg-menu-background));
-	color:var(--gg-menu-selectionForeground, var(--gg-menu-foreground));
+	background-color:var(--color-hover);
+}
+.contextMenu li.contextMenuItem:active{
+	background-color:var(--color-pressed);
+}
+.contextMenu li.contextMenuItem.danger{
+	color:var(--color-danger);
+}
+.contextMenu li.contextMenuItem.danger:hover{
+	background-color:var(--color-danger-bg);
 }
 
 .contextMenu li.contextMenuDivider{
-	margin:4px 10px;
-	border-top:1px solid var(--gg-menu-separatorBackground);
-	opacity:0.5;
+	height:1px;
+	margin:4px 8px;
+	background:var(--color-divider);
 }
 
 .contextMenu.checked li.contextMenuItem{
-	position:relative;
-	padding-left:35px;
+	padding-left:32px;
 }
-
 .contextMenu.checked li.contextMenuItem .contextMenuItemCheck{
 	position:absolute;
-	width:12px;
-	height:16px;
+	display:grid;
+	place-items:center;
+	width:14px;
+	height:14px;
 	top:50%;
-	margin-top:-8px;
-	left:15px;
-	-webkit-user-select:none;
-	user-select:none;
+	margin-top:-7px;
+	left:10px;
+	color:var(--color-accent);
 }
-
 .contextMenu.checked li.contextMenuItem .contextMenuItemCheck svg{
-	fill:var(--gg-menu-foreground);
-	opacity:0.6;
-}
-
-.contextMenu.checked li.contextMenuItem:hover .contextMenuItemCheck svg{
-	fill:var(--gg-menu-selectionForeground);
-	opacity:0.8;
+	width:14px;
+	height:14px;
+	fill:currentColor;
 }

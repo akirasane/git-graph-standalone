@@ -1,20 +1,24 @@
-import { BrowserWindow, Menu, dialog } from 'electron';
+import { BrowserWindow, Menu } from 'electron';
 import * as os from 'os';
+import { showAppDialog } from './appDialog';
 import { AvatarManager } from './avatarManager';
 import { GitGraphIpcHandler } from './ipc';
 import { DataSource } from './dataSource';
 import { CodeReviewData, CodeReviews, Store } from './store';
 import { RepoManager } from './repoManager';
 import { getConfig } from './config';
-import { PickerItem, showInput, showPicker } from './pickerWindow';
+import { PickerItem, showPicker } from './pickerWindow';
 import { checkForUpdates } from './updater';
 import { GitExecutable, abbrevCommit, abbrevText, copyToClipboard, getAppVersion, getRelativeTimeDiff, getRepoName, getSortedRepositoryPaths, showErrorMessage, showInformationMessage } from './utils';
 
+/** Hub actions the menu can trigger (the repository hub owns the open / clone / new flows). */
+export type HubAction = 'open' | 'clone' | 'new';
+
 /**
- * The application menu (Electron Menu), plus the
- * Menu; `showOpenDialog` maps directly to Electron's native `dialog.showOpenDialog` (no change in
- * kind needed), but `showQuickPick` has no native Electron equivalent, so repo/code-review
- * pickers use the small bespoke `pickerWindow.ts` list instead.
+ * The application menu. The native menu bar is hidden (custom Nocturne title bar), but this Menu
+ * stays installed so its accelerators keep working, and ui/titlebar.js renders the same items as
+ * a themed in-app menu (see chrome.ts). Every item therefore has a stable `id`.
+ * Pickers use the themed `pickerWindow.ts`; messages use the themed `appDialog.ts`.
  */
 export function buildMenu(
 	win: BrowserWindow,
@@ -24,130 +28,89 @@ export function buildMenu(
 	store: Store,
 	repoManager: RepoManager,
 	getGitExecutable: () => GitExecutable | null,
-	showHome: () => void
+	showHome: () => void,
+	hubAction: (action: HubAction) => void
 ): Menu {
 	const template: Electron.MenuItemConstructorOptions[] = [
 		{
+			id: 'app-menu',
 			label: 'Git Graph',
 			submenu: [
 				{
+					id: 'repositories',
 					label: 'Repositories',
 					accelerator: 'CmdOrCtrl+Shift+H',
 					click: () => showHome()
 				},
 				{ type: 'separator' },
 				{
-					label: 'Add Repository...',
-					click: () => addRepository(win, repoManager, getGitExecutable)
+					id: 'add-repo',
+					label: 'Add repository...',
+					click: () => hubAction('open')
 				},
 				{
-					label: 'Clone Repository...',
-					click: () => cloneRepository(win, repoManager, dataSource, getGitExecutable)
+					id: 'clone-repo',
+					label: 'Clone repository...',
+					click: () => hubAction('clone')
 				},
 				{
-					label: 'Init Repository...',
-					click: () => initRepository(win, repoManager, dataSource, getGitExecutable)
+					id: 'init-repo',
+					label: 'New repository...',
+					click: () => hubAction('new')
 				},
 				{
-					label: 'Remove Repository...',
+					id: 'remove-repo',
+					label: 'Remove repository...',
 					click: () => removeRepository(repoManager)
 				},
 				{ type: 'separator' },
 				{
-					label: 'Fetch from Remote(s)',
+					id: 'fetch',
+					label: 'Fetch from remotes',
 					click: () => fetchCurrentRepo(getIpcHandler, dataSource)
 				},
 				{
-					label: 'Clear Avatar Cache',
+					id: 'clear-avatars',
+					label: 'Clear avatar cache',
 					click: () => clearAvatarCache(avatarManager)
 				},
 				{ type: 'separator' },
 				{
-					label: 'End All Code Reviews',
+					id: 'end-all-reviews',
+					label: 'End all code reviews',
 					click: () => endAllCodeReviews(store)
 				},
 				{
-					label: 'End a specific Code Review...',
+					id: 'end-review',
+					label: 'End a code review...',
 					click: () => endSpecificCodeReview(store, repoManager, dataSource)
 				},
 				{ type: 'separator' },
 				{
-					label: 'Check for Updates...',
+					id: 'check-updates',
+					label: 'Check for updates...',
 					click: () => checkForUpdates(win, true)
 				},
 				{
-					label: 'Version',
+					id: 'version',
+					label: 'About Git Graph',
 					click: () => showVersion(getGitExecutable)
 				},
 				{ type: 'separator' },
-				{ role: 'quit' }
+				{ id: 'quit', role: 'quit', accelerator: 'CmdOrCtrl+Q' }
 			]
 		},
 		{
+			id: 'view-menu',
 			label: 'View',
 			submenu: [
-				{ role: 'reload' },
-				{ role: 'toggleDevTools' }
+				{ id: 'reload', role: 'reload', accelerator: 'CmdOrCtrl+R' },
+				{ id: 'devtools', role: 'toggleDevTools', accelerator: 'F12' }
 			]
 		}
 	];
 
 	return Menu.buildFromTemplate(template);
-}
-
-export async function addRepository(win: BrowserWindow, repoManager: RepoManager, getGitExecutable: () => GitExecutable | null) {
-	if (getGitExecutable() === null) {
-		showErrorMessage('Unable to find a Git executable.');
-		return;
-	}
-
-	const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
-	if (result.canceled || result.filePaths.length === 0) return;
-
-	const status = await repoManager.registerRepo(result.filePaths[0].replace(/\\/g, '/'), false);
-	if (status.error === null) {
-		showInformationMessage('The repository "' + status.root! + '" was added to Git Graph.');
-	} else {
-		showErrorMessage(status.error + ' Therefore it could not be added to Git Graph.');
-	}
-}
-
-export async function cloneRepository(win: BrowserWindow, repoManager: RepoManager, dataSource: DataSource, getGitExecutable: () => GitExecutable | null) {
-	if (getGitExecutable() === null) {
-		showErrorMessage('Unable to find a Git executable.');
-		return;
-	}
-	const url = await showInput('Clone Repository', 'Repository URL (https://..., git@...):', 'https://github.com/user/repo.git');
-	if (url === null) return;
-	const dir = await dialog.showOpenDialog(win, { title: 'Clone into folder...', properties: ['openDirectory', 'createDirectory'] });
-	if (dir.canceled || dir.filePaths.length === 0) return;
-
-	win.setTitle('Git Graph - cloning...');
-	const result = await dataSource.cloneRepo(url, dir.filePaths[0]);
-	win.setTitle('Git Graph');
-	if (result.error !== null || result.path === null) {
-		showErrorMessage('Clone failed: ' + result.error);
-		return;
-	}
-	const status = await repoManager.registerRepo(result.path, true);
-	if (status.error !== null) showErrorMessage(status.error);
-}
-
-async function initRepository(win: BrowserWindow, repoManager: RepoManager, dataSource: DataSource, getGitExecutable: () => GitExecutable | null) {
-	if (getGitExecutable() === null) {
-		showErrorMessage('Unable to find a Git executable.');
-		return;
-	}
-	const dir = await dialog.showOpenDialog(win, { title: 'Folder to initialise as a Git repository', properties: ['openDirectory', 'createDirectory'] });
-	if (dir.canceled || dir.filePaths.length === 0) return;
-	const folder = dir.filePaths[0].replace(/\\/g, '/');
-	const error = await dataSource.initRepo(folder);
-	if (error !== null) {
-		showErrorMessage('git init failed: ' + error);
-		return;
-	}
-	const status = await repoManager.registerRepo(folder, true);
-	if (status.error !== null) showErrorMessage(status.error);
 }
 
 async function removeRepository(repoManager: RepoManager) {
@@ -271,8 +234,8 @@ async function showVersion(getGitExecutable: () => GitExecutable | null) {
 		const appVersion = await getAppVersion();
 		const gitExecutable = getGitExecutable();
 		const information = 'Git Graph (standalone): ' + appVersion + '\nElectron: ' + process.versions.electron + '\nOS: ' + os.type() + ' ' + os.arch() + ' ' + os.release() + '\nGit: ' + (gitExecutable !== null ? gitExecutable.version : '(none)');
-		const result = await dialog.showMessageBox({ type: 'info', message: information, buttons: ['OK', 'Copy'] });
-		if (result.response === 1) {
+		const response = await showAppDialog({ type: 'info', title: 'About Git Graph', message: 'Git Graph ' + appVersion, detail: information, buttons: ['OK', 'Copy'], cancelId: 0 });
+		if (response === 1) {
 			const error = await copyToClipboard(information);
 			if (error !== null) showErrorMessage(error);
 		}

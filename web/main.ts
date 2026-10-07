@@ -92,6 +92,7 @@ class GitGraphView {
 		});
 
 		this.showRemoteBranchesElem = <HTMLInputElement>document.getElementById('showRemoteBranchesCheckbox')!;
+		if (this.showRemoteBranchesElem.parentElement !== null) this.showRemoteBranchesElem.parentElement.title = 'Show Remote Branches'; // The label text is hidden at narrow widths
 		this.showRemoteBranchesElem.addEventListener('change', () => {
 			this.saveRepoStateValue(this.currentRepo, 'showRemoteBranchesV2', this.showRemoteBranchesElem.checked ? GG.BooleanOverride.Enabled : GG.BooleanOverride.Disabled);
 			this.refresh(true);
@@ -112,7 +113,6 @@ class GitGraphView {
 		alterClass(document.body, CLASS_TAG_LABELS_RIGHT_ALIGNED, this.config.referenceLabels.tagLabelsOnRight);
 
 		this.observeWindowSizeChanges();
-		this.observeWebviewStyleChanges();
 		this.observeViewScroll();
 		this.observeKeyboardEvents();
 		this.observeUrls();
@@ -477,11 +477,14 @@ class GitGraphView {
 			if (refreshState.inProgress && refreshState.loadCommitsRefreshId === msg.refreshId) {
 				this.loadCommits(msg.commits, msg.head, msg.tags, msg.moreCommitsAvailable, msg.onlyFollowFirstParent);
 			}
+		} else if (this.gitBranches.length === 0 && msg.error.indexOf('bad revision \'HEAD\'') > -1) {
+			// A repository without any commits yet: render the empty state rather than an error
+			const refreshState = this.currentRepoRefreshState;
+			if (refreshState.inProgress && refreshState.loadCommitsRefreshId === msg.refreshId) {
+				this.loadCommits([], null, [], false, false);
+			}
 		} else {
-			const error = this.gitBranches.length === 0 && msg.error.indexOf('bad revision \'HEAD\'') > -1
-				? 'There are no commits in this repository.'
-				: msg.error;
-			this.displayLoadDataError('Unable to load Commits', error);
+			this.displayLoadDataError('Unable to load Commits', msg.error);
 		}
 	}
 
@@ -641,7 +644,7 @@ class GitGraphView {
 
 		this.renderRefreshButton();
 		if (this.commits.length === 0) {
-			this.tableElem.innerHTML = '<h2 id="loadingHeader">' + SVG_ICONS.loading + 'Loading ...</h2>';
+			this.tableElem.innerHTML = '<h2 id="loadingHeader">' + SVG_ICONS.loading + 'Loading commits' + ELLIPSIS + '</h2>';
 		}
 
 		if (skipRepoInfo) {
@@ -869,18 +872,26 @@ class GitGraphView {
 				(this.config.referenceLabels.branchLabelsAlignedToGraph ? '<td>' + (refBranches !== '' ? '<span style="margin-left:' + (widthsAtVertices[i] - 4) + 'px"' + refBranches.substring(5) : '') + '</td><td><span class="description">' + commitDot : '<td></td><td><span class="description">' + commitDot + refBranches) + (this.config.referenceLabels.tagLabelsOnRight ? message + refTags : refTags + message) + '</span></td>' +
 				(colVisibility.date ? '<td class="dateCol text" title="' + date.title + '">' + date.formatted + '</td>' : '') +
 				(colVisibility.author ? '<td class="authorCol text" title="' + escapeHtml(commit.author + ' <' + commit.email + '>') + '">' + (this.config.fetchAvatars ? '<span class="avatar" data-email="' + escapeHtml(commit.email) + '">' + (typeof this.avatars[commit.email] === 'string' ? '<img class="avatarImg" src="' + this.avatars[commit.email] + '">' : '') + '</span>' : '') + escapeHtml(commit.author) + '</td>' : '') +
-				(colVisibility.commit ? '<td class="text" title="' + escapeHtml(commit.hash) + '">' + abbrevCommit(commit.hash) + '</td>' : '') +
+				(colVisibility.commit ? '<td class="text hashCol" title="' + escapeHtml(commit.hash) + '">' + abbrevCommit(commit.hash) + '</td>' : '') +
 				'</tr>';
 		}
-		this.tableElem.innerHTML = '<table>' + html + '</table>';
-		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" class="roundedBtn">Load More Commits</div>' : '';
+		this.tableElem.innerHTML = '<table>' + html + '</table>' +
+			(this.commits.length === 0 ? '<div class="ggEmpty">' + SVG_ICONS.commit + '<b>No commits yet</b>Commits will appear here once something is committed' + (this.currentBranches !== null && !(this.currentBranches.length === 1 && this.currentBranches[0] === SHOW_ALL_BRANCHES) ? ' on the selected branches' : '') + '.</div>' : '');
+		this.footerElem.innerHTML = this.moreCommitsAvailable ? '<div id="loadMoreCommitsBtn" role="button" tabindex="0">' + SVG_ICONS.arrowDown + 'Load more commits</div>' : '';
 		this.makeTableResizable();
 		this.findWidget.refresh();
 		this.renderedGitBranchHead = this.gitBranchHead;
 
 		if (this.moreCommitsAvailable) {
-			document.getElementById('loadMoreCommitsBtn')!.addEventListener('click', () => {
+			const loadMoreCommitsBtn = document.getElementById('loadMoreCommitsBtn')!;
+			loadMoreCommitsBtn.addEventListener('click', () => {
 				this.loadMoreCommits();
+			});
+			loadMoreCommitsBtn.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					handledEvent(e);
+					this.loadMoreCommits();
+				}
 			});
 		}
 
@@ -927,7 +938,7 @@ class GitGraphView {
 		document.getElementById('uncommittedChanges')!.innerHTML = '<td></td><td><b>' + escapeHtml(this.commits[0].message) + '</b></td>' +
 			(colVisibility.date ? '<td class="dateCol text" title="' + date.title + '">' + date.formatted + '</td>' : '') +
 			(colVisibility.author ? '<td class="authorCol text" title="* <>">*</td>' : '') +
-			(colVisibility.commit ? '<td class="text" title="*">*</td>' : '');
+			(colVisibility.commit ? '<td class="text hashCol" title="*">*</td>' : '');
 	}
 
 	private renderFetchButton() {
@@ -1932,7 +1943,7 @@ class GitGraphView {
 	}
 
 	private loadMoreCommits() {
-		this.footerElem.innerHTML = '<h2 id="loadingHeader">' + SVG_ICONS.loading + 'Loading ...</h2>';
+		this.footerElem.innerHTML = '<h2 id="loadingHeader">' + SVG_ICONS.loading + 'Loading more commits' + ELLIPSIS + '</h2>';
 		this.maxCommits += this.config.loadMoreCommits;
 		this.saveState();
 		this.requestLoadRepoInfoAndCommits(false, true);
@@ -1951,48 +1962,6 @@ class GitGraphView {
 				windowHeight = window.outerHeight;
 			}
 		});
-	}
-
-	private observeWebviewStyleChanges() {
-		let fontFamily = getThemeStyle(CSS_PROP_FONT_FAMILY),
-			editorFontFamily = getThemeStyle(CSS_PROP_EDITOR_FONT_FAMILY),
-			findMatchColour = getThemeStyle(CSS_PROP_FIND_MATCH_HIGHLIGHT_BACKGROUND),
-			selectionBackgroundColor = !!getThemeStyle(CSS_PROP_SELECTION_BACKGROUND);
-
-		const setFlashColour = (colour: string) => {
-			document.body.style.setProperty('--git-graph-flashPrimary', modifyColourOpacity(colour, 0.7));
-			document.body.style.setProperty('--git-graph-flashSecondary', modifyColourOpacity(colour, 0.5));
-		};
-		const setSelectionBackgroundColorExists = () => {
-			alterClass(document.body, 'selection-background-color-exists', selectionBackgroundColor);
-		};
-
-		this.findWidget.setColour(findMatchColour);
-		setFlashColour(findMatchColour);
-		setSelectionBackgroundColorExists();
-
-		(new MutationObserver(() => {
-			let ff = getThemeStyle(CSS_PROP_FONT_FAMILY),
-				eff = getThemeStyle(CSS_PROP_EDITOR_FONT_FAMILY),
-				fmc = getThemeStyle(CSS_PROP_FIND_MATCH_HIGHLIGHT_BACKGROUND),
-				sbc = !!getThemeStyle(CSS_PROP_SELECTION_BACKGROUND);
-
-			if (ff !== fontFamily || eff !== editorFontFamily) {
-				fontFamily = ff;
-				editorFontFamily = eff;
-				this.repoDropdown.refresh();
-				this.branchDropdown.refresh();
-			}
-			if (fmc !== findMatchColour) {
-				findMatchColour = fmc;
-				this.findWidget.setColour(findMatchColour);
-				setFlashColour(findMatchColour);
-			}
-			if (selectionBackgroundColor !== sbc) {
-				selectionBackgroundColor = sbc;
-				setSelectionBackgroundColorExists();
-			}
-		})).observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
 	}
 
 	private observeViewScroll() {
@@ -2533,7 +2502,7 @@ class GitGraphView {
 		}
 
 		if (expandedCommit.loading) {
-			html += '<div id="cdvLoading">' + SVG_ICONS.loading + ' Loading ' + (expandedCommit.compareWithHash === null ? expandedCommit.commitHash !== UNCOMMITTED ? 'Commit Details' : 'Uncommitted Changes' : 'Commit Comparison') + ' ...</div>';
+			html += '<div id="cdvLoading">' + SVG_ICONS.loading + 'Loading ' + (expandedCommit.compareWithHash === null ? expandedCommit.commitHash !== UNCOMMITTED ? 'commit details' : 'uncommitted changes' : 'commit comparison') + ELLIPSIS + '</div>';
 		} else {
 			html += '<div id="cdvSummary">';
 			if (expandedCommit.compareWithHash === null) {
@@ -2556,22 +2525,24 @@ class GitGraphView {
 								: escapedParent;
 						}).join(', ')
 						: 'None';
-					html += '<span class="cdvSummaryTop' + (expandedCommit.avatar !== null ? ' withAvatar' : '') + '"><span class="cdvSummaryTopRow"><span class="cdvSummaryKeyValues">'
-						+ '<b>Commit: </b>' + escapeHtml(commitDetails.hash) + '<br>'
-						+ '<b>Parents: </b>' + parents + '<br>'
-						+ '<b>Author: </b>' + escapeHtml(commitDetails.author) + (commitDetails.authorEmail !== '' ? ' &lt;<a class="' + CLASS_EXTERNAL_URL + '" href="mailto:' + escapeHtml(commitDetails.authorEmail) + '" tabindex="-1">' + escapeHtml(commitDetails.authorEmail) + '</a>&gt;' : '') + '<br>'
-						+ (commitDetails.authorDate !== commitDetails.committerDate ? '<b>Author Date: </b>' + formatLongDate(commitDetails.authorDate) + '<br>' : '')
-						+ '<b>Committer: </b>' + escapeHtml(commitDetails.committer) + (commitDetails.committerEmail !== '' ? ' &lt;<a class="' + CLASS_EXTERNAL_URL + '" href="mailto:' + escapeHtml(commitDetails.committerEmail) + '" tabindex="-1">' + escapeHtml(commitDetails.committerEmail) + '</a>&gt;' : '') + (commitDetails.signature !== null ? generateSignatureHtml(commitDetails.signature) : '') + '<br>'
-						+ '<b>' + (commitDetails.authorDate !== commitDetails.committerDate ? 'Committer ' : '') + 'Date: </b>' + formatLongDate(commitDetails.committerDate)
-						+ '</span>'
+					const keyValue = (key: string, value: string, className: string = '') => '<span class="cdvKey">' + key + '</span><span class="cdvVal' + className + '">' + value + '</span>';
+					const person = (name: string, email: string) => escapeHtml(name) + (email !== '' ? ' <a class="' + CLASS_EXTERNAL_URL + '" href="mailto:' + escapeHtml(email) + '" tabindex="-1">' + escapeHtml(email) + '</a>' : '');
+					html += '<div class="cdvSummaryTop' + (expandedCommit.avatar !== null ? ' withAvatar' : '') + '"><div class="cdvSummaryKeyValues">'
+						+ keyValue('Commit', escapeHtml(commitDetails.hash), ' cdvMono')
+						+ keyValue(commitDetails.parents.length > 1 ? 'Parents' : 'Parent', parents, ' cdvMono')
+						+ keyValue('Author', person(commitDetails.author, commitDetails.authorEmail))
+						+ (commitDetails.authorDate !== commitDetails.committerDate ? keyValue('Authored', formatLongDate(commitDetails.authorDate)) : '')
+						+ keyValue('Committer', person(commitDetails.committer, commitDetails.committerEmail) + (commitDetails.signature !== null ? generateSignatureHtml(commitDetails.signature) : ''))
+						+ keyValue(commitDetails.authorDate !== commitDetails.committerDate ? 'Committed' : 'Date', formatLongDate(commitDetails.committerDate))
+						+ '</div>'
 						+ (expandedCommit.avatar !== null ? '<span class="cdvSummaryAvatar"><img src="' + expandedCommit.avatar + '"></span>' : '')
-						+ '</span></span><br><br>' + textFormatter.format(commitDetails.body);
+						+ '</div><div class="cdvBody">' + textFormatter.format(commitDetails.body) + '</div>';
 				} else {
-					html += 'Displaying all uncommitted changes.';
+					html += '<span class="cdvNote">Displaying all uncommitted changes.</span>';
 				}
 			} else {
 				// Commit comparison should be shown
-				html += 'Displaying all changes from <b>' + commitOrder.from + '</b> to <b>' + (commitOrder.to !== UNCOMMITTED ? commitOrder.to : 'Uncommitted Changes') + '</b>.';
+				html += '<span class="cdvNote">Displaying all changes from <b>' + commitOrder.from + '</b> to <b>' + (commitOrder.to !== UNCOMMITTED ? commitOrder.to : 'Uncommitted Changes') + '</b>.</span>';
 			}
 			html += '</div><div id="cdvFiles">' + generateFileViewHtml(expandedCommit.fileTree!, expandedCommit.fileChanges!, expandedCommit.lastViewedFile, expandedCommit.contextMenuOpen.fileView, this.getFileViewType(), commitOrder.to === UNCOMMITTED) + '</div><div id="cdvDivider"></div>';
 		}
@@ -2582,6 +2553,7 @@ class GitGraphView {
 			'</div><div class="cdvHeightResize"></div>';
 
 		elem.innerHTML = isDocked ? html : '<td><div class="cdvHeightResize"></div></td><td colspan="' + (this.getNumColumns() - 1) + '">' + html + '</td>';
+		alterClass(elem, 'cdvAnimate', !refresh); // Fade the content in when it first appears, not on background refreshes
 		if (!expandedCommit.loading) this.setCdvDivider();
 		if (!isDocked) this.renderGraph();
 
@@ -3290,7 +3262,11 @@ window.addEventListener('load', () => {
 				refreshOrDisplayError(msg.error, 'Unable to Export Repository Configuration');
 				break;
 			case 'fetch':
-				refreshOrDisplayError(msg.error, 'Unable to Fetch from Remote(s)');
+				if (msg.source === 'sidebar') {
+					gitGraph.refresh(false); // the sidebar shows the result (avoids a second, duplicate error dialog)
+				} else {
+					refreshOrDisplayError(msg.error, 'Unable to Fetch from Remote(s)');
+				}
 				break;
 			case 'fetchAvatar':
 				imageResizer.resize(msg.image, (resizedImage) => {
@@ -3589,9 +3565,9 @@ function generateFileTreeLeafHtml(name: string, leaf: FileTreeLeaf, gitFiles: Re
 		const textFile = fileTreeFile.additions !== null && fileTreeFile.deletions !== null;
 		const diffPossible = fileTreeFile.type === GG.GitFileStatus.Untracked || textFile;
 		const changeTypeMessage = GIT_FILE_CHANGE_TYPES[fileTreeFile.type] + (fileTreeFile.type === GG.GitFileStatus.Renamed ? ' (' + escapeHtml(fileTreeFile.oldFilePath) + ' → ' + escapeHtml(fileTreeFile.newFilePath) + ')' : '');
-		return '<li data-pathseg="' + encodedName + '"><span class="fileTreeFileRecord' + (leaf.index === fileContextMenuOpen ? ' ' + CLASS_CONTEXT_MENU_ACTIVE : '') + '" data-index="' + leaf.index + '"><span class="fileTreeFile' + (diffPossible ? ' gitDiffPossible' : '') + (leaf.reviewed ? '' : ' ' + CLASS_PENDING_REVIEW) + '" title="' + (diffPossible ? 'Click to View Diff' : 'Unable to View Diff' + (fileTreeFile.type !== GG.GitFileStatus.Deleted ? ' (this is a binary file)' : '')) + ' • ' + changeTypeMessage + '"><span class="fileTreeFileIcon">' + SVG_ICONS.file + '</span><span class="gitFileName ' + fileTreeFile.type + '">' + escapedName + '</span></span>' +
+		return '<li data-pathseg="' + encodedName + '"><span class="fileTreeFileRecord' + (leaf.index === fileContextMenuOpen ? ' ' + CLASS_CONTEXT_MENU_ACTIVE : '') + '" data-index="' + leaf.index + '"><span class="fileTreeFile' + (diffPossible ? ' gitDiffPossible' : '') + (leaf.reviewed ? '' : ' ' + CLASS_PENDING_REVIEW) + '" title="' + (diffPossible ? 'Click to View Diff' : 'Unable to View Diff' + (fileTreeFile.type !== GG.GitFileStatus.Deleted ? ' (this is a binary file)' : '')) + ' • ' + changeTypeMessage + '"><span class="fileTreeFileStatus ' + fileTreeFile.type + '">' + fileTreeFile.type + '</span><span class="gitFileName ' + fileTreeFile.type + '">' + escapedName + '</span></span>' +
 			(initialState.config.enhancedAccessibility ? '<span class="fileTreeFileType" title="' + changeTypeMessage + '">' + fileTreeFile.type + '</span>' : '') +
-			(fileTreeFile.type !== GG.GitFileStatus.Added && fileTreeFile.type !== GG.GitFileStatus.Untracked && fileTreeFile.type !== GG.GitFileStatus.Deleted && textFile ? '<span class="fileTreeFileAddDel">(<span class="fileTreeFileAdd" title="' + fileTreeFile.additions + ' addition' + (fileTreeFile.additions !== 1 ? 's' : '') + '">+' + fileTreeFile.additions + '</span>|<span class="fileTreeFileDel" title="' + fileTreeFile.deletions + ' deletion' + (fileTreeFile.deletions !== 1 ? 's' : '') + '">-' + fileTreeFile.deletions + '</span>)</span>' : '') +
+			(fileTreeFile.type !== GG.GitFileStatus.Untracked && textFile ? '<span class="fileTreeFileAddDel">' + (fileTreeFile.type !== GG.GitFileStatus.Deleted ? '<span class="fileTreeFileAdd" title="' + fileTreeFile.additions + ' addition' + (fileTreeFile.additions !== 1 ? 's' : '') + '">+' + fileTreeFile.additions + '</span>' : '') + (fileTreeFile.type !== GG.GitFileStatus.Added ? '<span class="fileTreeFileDel" title="' + fileTreeFile.deletions + ' deletion' + (fileTreeFile.deletions !== 1 ? 's' : '') + '">-' + fileTreeFile.deletions + '</span>' : '') + '</span>' : '') +
 			(fileTreeFile.newFilePath === lastViewedFile ? '<span id="cdvLastFileViewed" title="Last File Viewed">' + SVG_ICONS.eyeOpen + '</span>' : '') +
 			'<span class="copyGitFile fileTreeFileAction" title="Copy Absolute File Path to Clipboard">' + SVG_ICONS.copy + '</span>' +
 			(fileTreeFile.type !== GG.GitFileStatus.Deleted

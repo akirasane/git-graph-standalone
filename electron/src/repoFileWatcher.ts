@@ -11,8 +11,14 @@ export class RepoFileWatcher {
 	private repo: string | null = null;
 	private watcher: chokidar.FSWatcher | null = null;
 	private refreshTimeout: NodeJS.Timeout | null = null;
-	private muted: boolean = false;
+	// Nested mute counts: `write` (an action that changes the repository - its caller refreshes
+	// the view itself) suppresses every event; `read` (a query such as `git status`, which may
+	// rewrite .git/index to refresh stat info) only suppresses .git/index events, so external
+	// edits made while the UI is polling are no longer lost.
+	private writeMutes: number = 0;
+	private readMutes: number = 0;
 	private resumeAt: number = 0;
+	private indexResumeAt: number = 0;
 
 	constructor(repoChangeCallback: () => void) {
 		this.repoChangeCallback = repoChangeCallback;
@@ -59,19 +65,28 @@ export class RepoFileWatcher {
 		}
 	}
 
-	public mute() {
-		this.muted = true;
+	public mute(readOnly: boolean = false) {
+		if (readOnly) this.readMutes++; else this.writeMutes++;
 	}
 
-	public unmute() {
-		this.muted = false;
-		this.resumeAt = (new Date()).getTime() + 1500;
+	public unmute(readOnly: boolean = false) {
+		const resumeAt = (new Date()).getTime() + 1500;
+		if (readOnly) {
+			this.readMutes = Math.max(0, this.readMutes - 1);
+			this.indexResumeAt = Math.max(this.indexResumeAt, resumeAt);
+		} else {
+			this.writeMutes = Math.max(0, this.writeMutes - 1);
+			this.resumeAt = Math.max(this.resumeAt, resumeAt);
+		}
 	}
 
 	private refresh(path: string) {
-		if (this.muted) return;
-		if (!getPathFromStr(path).replace(this.repo + '/', '').match(FILE_CHANGE_REGEX)) return;
-		if ((new Date()).getTime() < this.resumeAt) return;
+		if (this.writeMutes > 0) return;
+		const relPath = getPathFromStr(path).replace(this.repo + '/', '');
+		if (!relPath.match(FILE_CHANGE_REGEX)) return;
+		const now = (new Date()).getTime();
+		if (now < this.resumeAt) return;
+		if (relPath === '.git/index' && (this.readMutes > 0 || now < this.indexResumeAt)) return;
 
 		if (this.refreshTimeout !== null) {
 			clearTimeout(this.refreshTimeout);

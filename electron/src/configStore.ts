@@ -18,7 +18,9 @@ export class ConfigStore {
 
 	private load(): { [key: string]: any } {
 		try {
-			return JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
+			const parsed = JSON.parse(fs.readFileSync(this.filePath, 'utf8'));
+			// `null` / an array would make every later set() throw.
+			return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
 		} catch (_) {
 			return {};
 		}

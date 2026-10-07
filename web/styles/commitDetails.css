@@ -1,0 +1,446 @@
+/*
+ * Commit Details View (#cdv): inline (expanded row inside the table) or docked (right column; the
+ * page positions the box, this file styles what is inside it). Tokens only.
+ */
+
+#cdv{
+	--cdv-bg:color-mix(in srgb, var(--color-bg) 82%, black);
+	--cdv-rule:color-mix(in srgb, var(--color-text) 8%, transparent);
+	color:var(--color-text);
+}
+#cdv.inline{
+	vertical-align:top;
+}
+#cdv.inline td{
+	position:relative;
+	background-color:var(--cdv-bg);
+	font-size:13px;
+	line-height:20px;
+	white-space:normal;
+	box-shadow:inset 0 1px 0 var(--cdv-rule), inset 0 -1px 0 var(--cdv-rule);
+}
+#cdv.inline td:first-child{
+	box-shadow:inset 2px 0 0 var(--color-accent), inset 0 1px 0 var(--cdv-rule), inset 0 -1px 0 var(--cdv-rule);
+}
+#cdv.docked{
+	display:block;
+	position:fixed;
+	left:0;
+	right:0;
+	bottom:0;
+	background-color:var(--cdv-bg);
+	font-size:13px;
+	line-height:20px;
+	white-space:normal;
+	cursor:default;
+}
+#cdvContent{
+	position:absolute;
+	left:0;
+	right:36px;
+}
+#cdv.cdvAnimate #cdvContent{
+	animation:gg-rise 180ms var(--ease);
+}
+
+#cdvControls{
+	position:absolute;
+	right:0;
+	width:36px;
+	display:flex;
+	flex-direction:column;
+	align-items:center;
+	gap:2px;
+	padding-top:6px;
+	box-sizing:border-box;
+}
+
+.cdvControlBtn{
+	position:relative;
+	display:grid;
+	place-items:center;
+	flex:none;
+	width:28px;
+	height:28px;
+	border-radius:var(--radius-md);
+	color:var(--color-muted);
+	cursor:pointer;
+	transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.cdvControlBtn svg{
+	width:16px;
+	height:16px;
+	fill:currentColor;
+}
+.cdvControlBtn:hover{
+	color:var(--color-text);
+	background-color:var(--color-hover);
+}
+.cdvControlBtn.active{
+	color:var(--color-accent);
+	background-color:var(--color-accent-hover);
+}
+.cdvControlBtn.active:hover{
+	background-color:var(--color-accent-pressed);
+}
+
+#cdvExternalDiff{
+	display:none;
+}
+#cdvExternalDiff.enabled{
+	display:grid;
+}
+
+#cdvSummary, #cdvFiles, #cdvLoading{
+	position:absolute;
+	top:0;
+	bottom:0;
+	box-sizing:border-box;
+	overflow-x:hidden;
+	overflow-y:auto;
+}
+#cdvSummary{
+	left:0;
+	width:50%;
+	padding:12px 16px 14px;
+	border-right:1px solid var(--cdv-rule);
+	text-overflow:ellipsis;
+	-webkit-user-select:text;
+	user-select:text;
+}
+#cdvDivider{
+	position:absolute;
+	left:50%;
+	width:7px;
+	margin-left:-3px;
+	cursor:col-resize;
+	z-index:1;
+}
+#cdvDivider:hover{
+	background:linear-gradient(var(--color-accent), var(--color-accent)) no-repeat center / 1px 100%;
+}
+
+.cdvSummaryTop{
+	display:flex;
+	align-items:flex-start;
+	gap:12px;
+	width:100%;
+}
+.cdvSummaryKeyValues{
+	display:grid;
+	grid-template-columns:max-content minmax(0, 1fr);
+	column-gap:12px;
+	row-gap:2px;
+	flex:1;
+	min-width:0;
+	font-size:12.5px;
+}
+.cdvKey{
+	color:var(--color-muted);
+	white-space:nowrap;
+}
+.cdvVal{
+	min-width:0;
+	overflow-wrap:anywhere;
+}
+.cdvVal.cdvMono{
+	font-family:var(--font-mono, monospace);
+	font-size:12px;
+}
+.cdvVal.cdvMono .internalUrl{
+	font-family:inherit;
+}
+.cdvSummaryAvatar{
+	flex:none;
+	width:44px;
+}
+.cdvSummaryAvatar > img{
+	display:block;
+	width:44px;
+	height:44px;
+	border-radius:50%;
+	box-shadow:var(--shadow-sm);
+}
+.cdvBody{
+	margin-top:12px;
+	padding-top:12px;
+	background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent) no-repeat top / 100% 1px;
+	font-size:13px;
+	line-height:20px;
+	overflow-wrap:anywhere;
+}
+.cdvNote{
+	color:var(--color-muted);
+}
+.cdvNote b{
+	color:var(--color-text);
+	font-weight:500;
+	font-family:var(--font-mono, monospace);
+	font-size:12px;
+}
+
+.signatureInfo{
+	display:inline-flex;
+	vertical-align:middle;
+	margin-left:6px;
+	cursor:help;
+}
+.signatureInfo svg{
+	width:14px;
+	height:14px;
+	fill:currentColor;
+}
+.signatureInfo.G, .signatureInfo.X{
+	color:var(--color-success);
+}
+.signatureInfo.U, .signatureInfo.Y, .signatureInfo.R, .signatureInfo.E{
+	color:var(--color-warning);
+}
+.signatureInfo.B{
+	color:var(--color-danger);
+}
+
+#cdvFiles{
+	left:50%;
+	right:0;
+	padding:8px 8px 10px 6px;
+	font-size:12.5px;
+	-webkit-user-select:none;
+	user-select:none;
+}
+#cdvFiles ul{
+	list-style-type:none;
+	margin:0;
+	padding:0 0 0 14px;
+}
+#cdvFiles > ul{
+	padding:0;
+}
+#cdvFiles li{
+	margin:0;
+	white-space:nowrap;
+	min-width:0;
+}
+
+#cdvLoading{
+	left:0;
+	right:0;
+	display:flex;
+	align-items:center;
+	justify-content:center;
+	gap:10px;
+	padding:12px;
+	color:var(--color-muted);
+	-webkit-user-select:none;
+	user-select:none;
+	text-align:center;
+}
+#cdvLoading svg{
+	width:16px;
+	height:16px;
+	color:var(--color-accent);
+}
+
+.cdvHeightResize{
+	position:absolute;
+	left:0;
+	right:0;
+	height:7px;
+	cursor:row-resize;
+	z-index:2;
+}
+.cdvHeightResize:hover{
+	background:linear-gradient(var(--color-accent), var(--color-accent)) no-repeat bottom / 100% 1px;
+}
+
+#cdv.inline #cdvContent, #cdv.inline #cdvControls{
+	top:0;
+	bottom:1px;
+}
+#cdv.inline #cdvDivider{
+	top:0;
+	bottom:6px;
+}
+#cdv.inline .cdvHeightResize{
+	bottom:0;
+}
+
+/* docked: the controls become a quiet header bar */
+#cdv.docked #cdvControls{
+	top:0;
+	left:0;
+	right:0;
+	width:auto;
+	height:40px;
+	flex-direction:row;
+	justify-content:flex-end;
+	gap:2px;
+	padding:0 8px;
+	box-shadow:inset 0 -1px 0 var(--cdv-rule);
+}
+#cdv.docked #cdvControls::before{
+	content:"Commit details";
+	margin-right:auto;
+	padding-left:6px;
+	font-size:10px;
+	font-weight:600;
+	letter-spacing:0.1em;
+	text-transform:uppercase;
+	color:var(--color-muted);
+}
+#cdv.docked #cdvClose{
+	order:9;
+	margin-left:6px;
+}
+#cdv.docked #cdvContent{
+	top:40px;
+	right:0;
+	bottom:0;
+}
+#cdv.docked #cdvDivider{
+	top:6px;
+	bottom:0;
+}
+#cdv.docked .cdvHeightResize{
+	top:0;
+}
+
+
+/* File tree / list */
+
+.fileTreeFileRecord, .fileTreeFolder, .fileTreeRepo{
+	display:flex;
+	align-items:center;
+	gap:6px;
+	height:26px;
+	padding:0 6px;
+	border-radius:var(--radius-sm);
+	min-width:0;
+	transition:background-color 100ms var(--ease);
+}
+.fileTreeFileRecord:hover, .fileTreeFolder:hover, .fileTreeRepo:hover, .fileTreeFileRecord.contextMenuActive, .fileTreeFileRecord.dialogActive{
+	background-color:var(--color-hover);
+}
+.fileTreeFile{
+	display:flex;
+	align-items:center;
+	gap:8px;
+	flex:0 1 auto;
+	min-width:0;
+}
+.fileTreeFolder, .fileTreeRepo{
+	cursor:pointer;
+	color:var(--color-muted);
+}
+.fileTreeFolder:hover, .fileTreeRepo:hover{
+	color:var(--color-text);
+}
+.gitFolderName, .gitFileName{
+	min-width:0;
+	overflow:hidden;
+	text-overflow:ellipsis;
+	white-space:nowrap;
+}
+.fileTreeFolderIcon, .fileTreeRepoIcon, .fileTreeFileStatus{
+	display:inline-grid;
+	place-items:center;
+	flex:none;
+	width:14px;
+	height:14px;
+}
+.fileTreeFolderIcon svg, .fileTreeRepoIcon svg{
+	width:14px;
+	height:14px;
+	fill:currentColor;
+}
+.fileTreeFileStatus{
+	font-family:var(--font-mono, monospace);
+	font-size:11px;
+	font-weight:600;
+	color:var(--color-warning);
+}
+.fileTreeFileStatus.A, .fileTreeFileStatus.U{
+	color:var(--color-success);
+}
+.fileTreeFileStatus.D{
+	color:var(--color-danger);
+}
+.fileTreeFileStatus.R{
+	color:var(--color-info);
+}
+.fileTreeFolderContents.hidden{
+	display:none;
+}
+.fileTreeFile .gitFileName{
+	color:var(--color-text);
+}
+.fileTreeFile .gitFileName.D{
+	color:var(--color-muted);
+	text-decoration:line-through;
+	text-decoration-color:color-mix(in srgb, var(--color-danger) 60%, transparent);
+}
+.fileTreeFile.gitDiffPossible{
+	cursor:pointer;
+}
+.fileTreeFileType{
+	flex:none;
+	color:var(--color-muted);
+	cursor:help;
+}
+.fileTreeFileAddDel{
+	display:inline-flex;
+	gap:5px;
+	flex:none;
+	margin-left:auto;
+	font-family:var(--font-mono, monospace);
+	font-size:11.5px;
+	font-variant-numeric:tabular-nums;
+}
+.fileTreeFileAdd, .fileTreeFileDel{
+	cursor:help;
+}
+.fileTreeFileAdd{
+	color:var(--color-success);
+}
+.fileTreeFileDel{
+	color:var(--color-danger);
+}
+.fileTreeFileAction, #cdvLastFileViewed{
+	display:inline-grid;
+	place-items:center;
+	flex:none;
+	width:22px;
+	height:22px;
+	border-radius:var(--radius-sm);
+	color:var(--color-muted);
+}
+.fileTreeFileAction{
+	display:none;
+	cursor:pointer;
+}
+.fileTreeFileAddDel ~ .fileTreeFileAction, .fileTreeFileAddDel ~ #cdvLastFileViewed{
+	margin-left:0;
+}
+.fileTreeFileRecord > .fileTreeFile + .fileTreeFileAction, .fileTreeFileRecord > .fileTreeFile + #cdvLastFileViewed{
+	margin-left:auto;
+}
+#cdvLastFileViewed{
+	color:var(--color-accent);
+	cursor:help;
+}
+.fileTreeFileAction svg, #cdvLastFileViewed svg{
+	width:14px;
+	height:14px;
+	fill:currentColor;
+}
+.fileTreeFileRecord:hover .fileTreeFileAction, .fileTreeFileRecord.contextMenuActive .fileTreeFileAction, .fileTreeFileRecord.dialogActive .fileTreeFileAction{
+	display:inline-grid;
+}
+.fileTreeFileAction:hover{
+	color:var(--color-text);
+	background-color:var(--color-hover);
+}
+
+.fileTreeFolder.pendingReview .gitFolderName, .fileTreeFile.pendingReview .gitFileName{
+	font-weight:600;
+}

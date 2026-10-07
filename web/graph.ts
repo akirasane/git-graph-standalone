@@ -150,7 +150,7 @@ class Branch {
 		const shadow = svg.appendChild(document.createElementNS(SVG_NAMESPACE, 'path')), line = svg.appendChild(document.createElementNS(SVG_NAMESPACE, 'path'));
 		shadow.setAttribute('class', 'shadow');
 		shadow.setAttribute('d', path);
-		line.setAttribute('class', 'line');
+		line.setAttribute('class', isCommitted ? 'line' : 'line uncommitted'); // Uncommitted lines are coloured by CSS
 		line.setAttribute('d', path);
 		line.setAttribute('stroke', isCommitted ? colour : '#808080');
 		if (!isCommitted && uncommittedChanges === GG.GraphUncommittedChangesStyle.OpenCircleAtTheCheckedOutCommit) {
@@ -313,6 +313,7 @@ class Vertex {
 		} else {
 			circle.setAttribute('fill', colour);
 		}
+		if (!this.isCommitted) circle.classList.add('uncommitted'); // Coloured by CSS
 		svg.appendChild(circle);
 
 		if (this.isStash && !this.isCurrent) {

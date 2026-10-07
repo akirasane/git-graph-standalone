@@ -3,270 +3,313 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" type="text/css" href="../media/out.min.css">
 	<title>Git Graph</title>
+	<!-- Nocturne first (tokens + components), then the graph renderer's own styles, then the shell layout below. -->
+	<link rel="stylesheet" href="ui/nocturne.css">
+	<link rel="stylesheet" type="text/css" href="../media/out.min.css">
 	<style>
 		/*
-		 * Theme: "Terminal Velocity" (stitch_git_graph_standalone_theming_fix/DESIGN.md).
-		 * out.min.css is written against theme variables (--gg-*) that the host page must define, so
-		 * anything
-		 * reading them (menu/dropdown/dialog backgrounds, borders) fell back to transparent, and
-		 * general body text had no foreground rule at all (out.min.css expects the
-		 * host page to supply it) - the fix below both supplies the missing base text color and
-		 * maps every consumed --gg-* var to this design system's tokens.
+		 * Graph shell (Nocturne): left sidebar, centre graph (#view, rendered by media/out.min.js),
+		 * right Working copy / Stash panel (or the docked commit details #cdv.docked in the same box),
+		 * and the full-window conflict editor. Tokens only - see design/README.md.
+		 * The top var(--titlebar-h, 0px) is reserved for the custom window title bar.
 		 */
+		:root{
+			--sb-w: 248px;
+			--rp-w: 318px;
+			--shell-top: var(--titlebar-h, 0px);
+			--panel-bg: color-mix(in srgb, var(--color-bg) 82%, black);
+			--rule: color-mix(in srgb, var(--color-text) 8%, transparent);
+			--row-h: 28px;
+		}
+		@media (max-width: 1180px){ :root{ --sb-w: 220px; --rp-w: 288px; } }
+		@media (max-width: 1024px){ :root{ --sb-w: 208px; --rp-w: 272px; } }
+
+		/* The graph renderer is written against Nocturne tokens. */
 		body{
-			--git-graph-color0:#0085d9; --git-graph-color1:#d9008f; --git-graph-color2:#00d90a; --git-graph-color3:#d98500; --git-graph-color4:#a300d9; --git-graph-color5:#ff0000; --git-graph-color6:#00d9cc; --git-graph-color7:#e138e8; --git-graph-color8:#85d900; --git-graph-color9:#dc5b23; --git-graph-color10:#6f24d6; --git-graph-color11:#ffcc00;
+			--git-graph-color0:#9184d9; --git-graph-color1:#6fb5c9; --git-graph-color2:#c79a6a; --git-graph-color3:#7fc79b; --git-graph-color4:#d98fa6; --git-graph-color5:#a8b86a;
+			--git-graph-color6:#7a9fe0; --git-graph-color7:#c98ad9; --git-graph-color8:#6fc9b0; --git-graph-color9:#d9a06f; --git-graph-color10:#9aa0b8;
 
-			--gg-font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", sans-serif;
 
-			/* Level 0/1/2 tonal layering */
-			--gg-editor-background: #1e1e1e;
-			--gg-editorWidget-background: #252526;
-			--gg-menu-background: #3c3c3c;
-
-			/* Text */
-			--gg-editor-foreground: #d4d4d4;
-			--gg-editorSuggestWidget-foreground: #d4d4d4;
-			--gg-menu-foreground: #cccccc;
-			--gg-input-foreground: #cccccc;
-			--gg-input-placeholderForeground: #a6a6a6;
-
-			/* Accents: #007fd4 = focus/primary actions, #3794ff = interactive text/links */
-			--gg-focusBorder: #007fd4;
-			--gg-textLink-foreground: #3794ff;
-			--gg-textLink-activeForeground: #3794ff;
-			--gg-inputOption-activeBorder: #007acc;
-			--gg-inputOption-activeBackground: rgba(0,127,212,0.4);
-
-			/* Selection: #094771 for passive row/text selection, #007fd4 for active menu-item hover */
-			--gg-selection-background: #094771;
-			--gg-menu-selectionBackground: #007fd4;
-			--gg-menu-selectionForeground: #ffffff;
-			--gg-menu-selectionBorder: transparent;
-
-			/* Borders / separators - 1px solid lines define structure, no blur/shadow per design */
-			--gg-menu-border: #454545;
-			--gg-menu-separatorBackground: #454545;
-			--gg-widget-shadow: rgba(0,0,0,0.5);
-			--gg-scrollbar-shadow: #000000;
-
-			--gg-input-background: #3c3c3c;
-			--gg-inputValidation-errorBorder: #be1100;
-			--gg-inputValidation-errorBackground: #5a1d1d;
-			--gg-editor-findMatchHighlightBorder: #ea5c00aa;
-
-			--gg-gitDecoration-modifiedResourceForeground: #e2c08d;
-			--gg-gitDecoration-addedResourceForeground: #81b88b;
-			--gg-gitDecoration-deletedResourceForeground: #c74e39;
+			font-size: 13px;
+			color: var(--color-text);
+			font-family: var(--font-body);
+			background-color: var(--color-bg);
 		}
+		#view{ color: var(--color-text); font-family: var(--font-body); background-color: var(--color-bg); }
+		[data-color="0"]{--git-graph-color:var(--git-graph-color0);} [data-color="1"]{--git-graph-color:var(--git-graph-color1);} [data-color="2"]{--git-graph-color:var(--git-graph-color2);} [data-color="3"]{--git-graph-color:var(--git-graph-color3);} [data-color="4"]{--git-graph-color:var(--git-graph-color4);} [data-color="5"]{--git-graph-color:var(--git-graph-color5);} [data-color="6"]{--git-graph-color:var(--git-graph-color6);} [data-color="7"]{--git-graph-color:var(--git-graph-color7);} [data-color="8"]{--git-graph-color:var(--git-graph-color8);} [data-color="9"]{--git-graph-color:var(--git-graph-color9);} [data-color="10"]{--git-graph-color:var(--git-graph-color10);}
+		[hidden]{ display: none !important; }
 
-		/* out.min.css never sets a base foreground color (assumes the host page
-		   supplies one) - this is the actual fix for the dark-bg/dark-text bug. */
-		body, #view{
-			color: var(--gg-editor-foreground);
-			font-family: var(--gg-font-family);
-			background-color: var(--gg-editor-background);
-		}
-
-		[data-color="0"]{--git-graph-color:var(--git-graph-color0);} [data-color="1"]{--git-graph-color:var(--git-graph-color1);} [data-color="2"]{--git-graph-color:var(--git-graph-color2);} [data-color="3"]{--git-graph-color:var(--git-graph-color3);} [data-color="4"]{--git-graph-color:var(--git-graph-color4);} [data-color="5"]{--git-graph-color:var(--git-graph-color5);} [data-color="6"]{--git-graph-color:var(--git-graph-color6);} [data-color="7"]{--git-graph-color:var(--git-graph-color7);} [data-color="8"]{--git-graph-color:var(--git-graph-color8);} [data-color="9"]{--git-graph-color:var(--git-graph-color9);} [data-color="10"]{--git-graph-color:var(--git-graph-color10);} [data-color="11"]{--git-graph-color:var(--git-graph-color11);}
-
-		::-webkit-scrollbar{ width:10px; height:10px; }
-		::-webkit-scrollbar-track{ background:#1e1e1e; }
-		::-webkit-scrollbar-thumb{ background:#333333; }
-		::-webkit-scrollbar-thumb:hover{ background:#444444; }
-
-
-		/*
-		 * Right-side Commit Details panel (GitFlow Visualizer / "Terminal Velocity" mockup).
-		 * web/main.ts's "docked" mode is normally a full-width bar docked to the BOTTOM of the
-		 * view, resizable by height. Re-skinned here to dock to the RIGHT instead, resizable
-		 * width fixed for now - this is pure CSS repositioning of the existing docked DOM
-		 * (#cdv.docked, #cdvSummary, #cdvFiles, #cdvControls), not a change to web/main.ts, so
-		 * all existing behaviour (file tree, diff-possible clicks, code review, avatars) keeps
-		 * working unmodified. commitDetailsView.location defaults to "Docked to Bottom" (see
-		 * electron/src/config.ts) so this panel is what actually renders.
-		 */
-		:root{ --cdv-panel-width: 360px; }
-		/* Unconditional now: the right column is always reserved, either for the new Working
-		   Copy / Stash panel (#wcPanel, always in the DOM) or for #cdv.docked's commit-details
-		   content when a commit is expanded - both occupy the exact same box, see #wcPanel below. */
+		/* ---------- page frame ---------- */
 		#view{
-			right: var(--cdv-panel-width) !important;
+			top: var(--shell-top) !important;
+			left: var(--sb-w) !important;
+			right: var(--rp-w) !important;
 			bottom: 0 !important;
 		}
-		#cdv.docked{
-			left: auto !important;
-			right: 0;
-			top: 41px; /* below #controls */
-			bottom: 0;
-			width: var(--cdv-panel-width);
-			height: auto !important;
-			background-color: var(--gg-editorWidget-background);
-			border-left: 1px solid var(--gg-menu-border);
+
+		/* Shared shell primitives */
+		.shIconBtn{
+			display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; flex: none; cursor: pointer;
+			border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-muted);
+			transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 		}
-		/* Height-resize handle only makes sense for the old bottom-docked bar. */
-		#cdv.docked .cdvHeightResize{ display:none !important; }
-		/* Stack summary above the file list instead of the default left/right split - full
-		   width for both, since a 360px-wide panel is too narrow for a side-by-side split. */
-		#cdv.docked #cdvDivider{ display:none !important; }
+		.shIconBtn [data-icon]{ width: 15px; height: 15px; }
+		.shIconBtn:hover{ background: var(--color-hover); color: var(--color-text); }
+		.shIconBtn:active{ background: var(--color-pressed); }
+		.shIconBtn.danger:hover{ color: var(--color-danger); background: var(--color-danger-bg); }
+		.shIconBtn:disabled{ opacity: .45; pointer-events: none; }
+		.shKicker{ font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
+		.shLink{
+			border: 0; background: transparent; padding: 2px 6px; margin-right: -6px; border-radius: var(--radius-sm); cursor: pointer;
+			font: inherit; font-size: 12px; color: var(--color-accent); white-space: nowrap;
+		}
+		.shLink:hover{ background: var(--color-accent-hover); }
+		.shLink.danger{ color: var(--color-danger); }
+		.shLink.danger:hover{ background: var(--color-danger-bg); }
+		.shLink:disabled{ opacity: .45; pointer-events: none; }
+		.shEmpty{ display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px 16px; text-align: center; color: var(--color-muted); font-size: 12.5px; }
+		.shEmpty [data-icon]{ width: 22px; height: 22px; color: var(--color-faint); }
+		.shEmpty b{ font-weight: 500; color: var(--color-text); font-size: 13px; }
+		.shSkel{ display: flex; flex-direction: column; gap: 10px; padding: 8px 14px; }
+		.shSkel .skeleton{ height: 10px; }
+		.shSkel .skeleton:nth-child(2n){ width: 70%; } .shSkel .skeleton:nth-child(3n){ width: 82%; }
+		.shPath{ display: flex; min-width: 0; flex: 1; white-space: nowrap; }
+		.shPath .dir{ color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }
+		.shPath .base{ overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; }
+
+		/* ---------- left sidebar (sidebar.js) ---------- */
+		#sidebar{
+			position: fixed; left: 0; top: var(--shell-top); bottom: 0; width: var(--sb-w); z-index: 5;
+			display: flex; flex-direction: column; overflow: hidden;
+			background: var(--panel-bg); border-right: 1px solid var(--rule); font-size: 13px;
+		}
+		#sbHome{
+			display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; height: 30px; margin: 10px 8px 2px; padding: 0 8px;
+			border: 0; border-radius: var(--radius-md); background: transparent; color: var(--color-muted); font: inherit; font-size: 13px; cursor: pointer;
+			transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+		}
+		#sbHome [data-icon]{ width: 15px; height: 15px; transition: transform var(--dur) var(--ease); }
+		#sbHome:hover{ color: var(--color-text); background: var(--color-hover); }
+		#sbHome:hover [data-icon]{ transform: translateX(-2px); }
+		#sbSync{ padding: 2px 10px 10px; flex: none; }
+		#sbBranchLine{ display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 6px; min-width: 0; font-size: 13px; }
+		#sbBranchLine [data-icon]{ width: 14px; height: 14px; color: var(--color-muted); }
+		#sbBranchLine .sbBl-branch{ font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; min-width: 0; }
+		#sbBranchLine .sbBl-arrow{ width: 12px; height: 12px; color: var(--color-faint); }
+		#sbBranchLine .sbBl-up{ color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 0; min-width: 0; }
+		#sbBranchLine.unpublished .sbBl-up{ color: var(--color-warning); }
+		#sbBranchLine.detached .sbBl-branch{ color: var(--color-warning); }
+		#sbBranchLine.noUpstream .sbBl-arrow{ display: none; }
+		.sbSyncBtns{ display: flex; gap: 5px; margin-top: 6px; }
+		.sbSyncBtn{ flex: 1 1 auto; height: 30px; padding: 0 5px; gap: 4px; font-size: 12px; min-width: 0; }
+		.sbSyncBtn > span{ overflow: hidden; text-overflow: ellipsis; }
+		.sbSyncBtn [data-icon]{ width: 13px; height: 13px; }
+		@media (max-width: 1180px){ .sbSyncBtn:not(.busy) [data-icon]{ display: none; } }
+		.sbSyncBtn.hot{ color: var(--color-accent); border-color: var(--color-accent); }
+		.sbSyncBtn.hot:hover{ background: var(--color-accent-hover); }
+		.sbSyncBtn.busy [data-icon]{ animation: gg-spin .8s linear infinite; }
+		.sbBadge{
+			min-width: 16px; height: 16px; padding: 0 3px; border-radius: 999px; border: 1px solid currentColor;
+			font-size: 10px; line-height: 14px; font-weight: 500; text-align: center; font-variant-numeric: tabular-nums;
+		}
+		#sbTop{ position: relative; padding: 0 10px 8px; flex: none; }
+		#sbTop [data-icon]{ position: absolute; left: 21px; top: 9px; width: 14px; height: 14px; color: var(--color-faint); pointer-events: none; }
+		#sbFilter{ padding-left: 32px; height: 32px; }
+		#sbFilter::-webkit-search-cancel-button{ filter: invert(.6); cursor: pointer; }
+		#sbScroll{ flex: 1; overflow-y: auto; min-height: 0; padding-bottom: 12px; }
+		.sbHeader{
+			display: flex; align-items: center; gap: 6px; width: 100%; height: 30px; margin-top: 4px; padding: 0 14px 0 12px;
+			border: 0; background: transparent; cursor: pointer; text-align: left; font: inherit;
+		}
+		.sbHeader .shKicker{ transition: color var(--dur) var(--ease); }
+		.sbHeader:hover .shKicker{ color: var(--color-text); }
+		.sbCaret{ width: 11px; height: 11px; color: var(--color-muted); transition: transform var(--dur) var(--ease); }
+		.sbHeader[aria-expanded="false"] .sbCaret{ transform: rotate(-90deg); }
+		.sbCount{ margin-left: auto; font-size: 11px; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+		.sbList{ list-style: none; margin: 0; padding: 0; }
+		.sbRow{
+			position: relative; display: flex; align-items: center; gap: 6px; height: var(--row-h); margin: 0 6px; padding: 0 6px 0 22px;
+			border-radius: var(--radius-md); cursor: default; transition: background var(--dur) var(--ease);
+		}
+		.sbRow:hover{ background: var(--color-hover); }
+		.sbRow:focus-visible{ outline-offset: -2px; }
+		.sbRow.sbCurrent{ background: color-mix(in srgb, var(--color-accent) 10%, transparent); box-shadow: inset 2px 0 0 var(--color-accent); }
+		.sbRow.sbCurrent::before{ content: ""; position: absolute; left: 10px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--color-accent); }
+		.sbRow.sbCurrent .sbLabel{ font-weight: 500; }
+		.sbLabel{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.sbSub{ color: var(--color-faint); font-size: 11px; flex: none; }
+		.sbActions{ display: none; gap: 1px; flex: none; margin-right: -2px; }
+		.sbRow:hover .sbActions, .sbRow:focus-within .sbActions{ display: flex; }
+		.sbRow:hover .sbSub, .sbRow:focus-within .sbSub{ display: none; }
+		.sbBtn{ width: 22px; height: 22px; }
+		.sbBtn [data-icon]{ width: 14px; height: 14px; }
+		.sbRemoteName{ display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 12px 0 20px; font-size: 12px; color: var(--color-muted); }
+		.sbRemoteName [data-icon]{ width: 13px; height: 13px; color: var(--color-faint); }
+		.sbRemoteName ~ .sbRow{ padding-left: 28px; }
+		.sbEmpty{ padding: 4px 28px 6px; font-size: 12px; color: var(--color-muted); }
+		.sbMore{ display: block; margin: 2px 6px 0 22px; }
+		.sbSkel{ padding: 10px 18px; }
+
+		/* conflict banner (conflicts.js renders into #sbConflicts) */
+		#sbConflicts{
+			flex: none; max-height: 40%; overflow-y: auto; margin: 0 10px 10px; padding: 10px 10px 10px 12px;
+			border-radius: var(--radius-md); background: var(--color-warning-bg);
+			box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-warning) 40%, transparent); animation: gg-rise 220ms var(--ease);
+		}
+		.cfTitle{ display: flex; align-items: center; gap: 6px; font-weight: 500; color: var(--color-warning); }
+		.cfTitle [data-icon]{ width: 15px; height: 15px; }
+		.cfSub{ margin: 2px 0 6px; font-size: 12px; color: var(--color-muted); }
+		.cfList{ list-style: none; margin: 0 -4px 8px; padding: 0; }
+		.cfFile{
+			display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 4px; border-radius: var(--radius-sm); cursor: pointer; font-size: 12.5px;
+		}
+		.cfFile [data-icon]{ width: 13px; height: 13px; color: var(--color-warning); }
+		.cfFile:hover{ background: var(--color-hover); }
+		.cfButtons{ display: flex; flex-wrap: wrap; gap: 6px; }
+		.cfButtons .btn{ height: 26px; }
+		.cfMessage{ color: var(--color-danger); font-size: 12px; margin-top: 6px; }
+		.cfMessage:empty{ display: none; }
+
+		/* ---------- right panel: Working copy / Stash (panel.js) ---------- */
+		#wcPanel{
+			position: fixed; right: 0; top: var(--shell-top); bottom: 0; width: var(--rp-w); z-index: 5;
+			display: flex; flex-direction: column; overflow: hidden; font-size: 13px;
+			background: var(--panel-bg); border-left: 1px solid var(--rule);
+		}
+		.wcTabs{ display: flex; gap: 2px; padding: 8px 10px 0; flex: none; box-shadow: inset 0 -1px 0 var(--rule); }
+		.wcTab{
+			display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; cursor: pointer;
+			border: 0; border-bottom: 2px solid transparent; border-radius: var(--radius-sm) var(--radius-sm) 0 0; background: transparent;
+			font: inherit; font-size: 13px; font-weight: 500; color: var(--color-muted);
+			transition: color var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+		}
+		.wcTab:hover{ color: var(--color-text); background: var(--color-hover); }
+		.wcTab:focus-visible{ outline-offset: -2px; }
+		.wcTab.active{ color: var(--color-text); border-bottom-color: var(--color-accent); }
+		.wcTabCount{ font-size: 11px; font-weight: 400; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+		.wcTabCount:empty{ display: none; }
+		.wcTabContent{ flex: 1; display: flex; flex-direction: column; min-height: 0; }
+		.wcLists{ flex: 1; overflow-y: auto; min-height: 0; padding: 4px 0 8px; }
+		.wcSection{ padding-bottom: 4px; }
+		.wcSectionHeader{ display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 30px; padding: 0 14px; margin-top: 4px; }
+		.wcSectionHeader > span:last-child{ display: flex; gap: 4px; }
+		.wcFileList{ list-style: none; margin: 0; padding: 0; }
+		.wcFileRow{
+			display: flex; align-items: center; gap: 8px; height: var(--row-h); margin: 0 6px; padding: 0 6px 0 8px; border-radius: var(--radius-md);
+			cursor: pointer; transition: background var(--dur) var(--ease);
+		}
+		.wcFileRow:hover{ background: var(--color-hover); }
+		.wcFileRow:focus-visible{ outline-offset: -2px; }
+		.wcStatus{ width: 12px; flex: none; font-size: 11.5px; font-weight: 600; text-align: center; }
+		.wcStatus.s-M{ color: var(--color-warning); } .wcStatus.s-A, .wcStatus.s-U{ color: var(--color-success); }
+		.wcStatus.s-D{ color: var(--color-danger); } .wcStatus.s-R{ color: var(--color-info); }
+		.wcFileStats{ flex: none; font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+		.wcAdd{ color: var(--color-success); } .wcDel{ color: var(--color-danger); margin-left: 5px; }
+		.wcFileActions{ display: none; gap: 1px; flex: none; margin-right: -2px; }
+		.wcFileRow:hover .wcFileActions, .wcFileRow:focus-within .wcFileActions{ display: flex; }
+		.wcFileRow:hover .wcFileStats, .wcFileRow:focus-within .wcFileStats{ display: none; }
+		.wcFileAction{ width: 22px; height: 22px; }
+		.wcFileAction [data-icon]{ width: 14px; height: 14px; }
+		.wcEmpty{ padding: 2px 22px 6px; font-size: 12px; color: var(--color-muted); }
+		.wcCommitSection{ flex: none; display: flex; flex-direction: column; gap: 8px; padding: 12px; box-shadow: inset 0 1px 0 var(--rule); }
+		.wcSummaryRow{ display: flex; gap: 6px; }
+		.wcSummaryRow .input{ flex: 1; min-width: 0; }
+		.wcAiBtn{ width: 32px; height: 32px; padding: 0; flex: none; }
+		.wcAiBtn [data-icon]{ width: 16px; height: 16px; }
+		.wcAiBtn.busy{ pointer-events: none; }
+		.wcAiBtn.busy [data-icon]{ animation: gg-spin .8s linear infinite; }
+		#wcDescriptionInput{ min-height: 58px; height: 58px; max-height: 40vh; }
+		.wcCommitSection .input[readonly]{ color: var(--color-muted); }
+		.wcChecks{ display: flex; flex-direction: column; gap: 6px; padding: 2px 0; }
+		.wcChecks .check{ font-size: 12.5px; color: color-mix(in srgb, var(--color-text) 85%, transparent); }
+		.wcCommitBtn{ height: 32px; }
+		.wcCommitBtn [data-icon]{ width: 15px; height: 15px; }
+		.wcStashRow{
+			display: flex; align-items: center; gap: 10px; min-height: 40px; margin: 0 6px; padding: 4px 6px 4px 10px; border-radius: var(--radius-md);
+			transition: background var(--dur) var(--ease);
+		}
+		.wcStashRow:hover{ background: var(--color-hover); }
+		.wcStashRow > [data-icon]{ width: 15px; height: 15px; color: var(--color-muted); }
+		.wcStashText{ flex: 1; min-width: 0; display: flex; flex-direction: column; }
+		.wcStashMessage, .wcStashMeta{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.wcStashMeta{ font-size: 11.5px; color: var(--color-muted); }
+		.wcStashActions{ display: none; gap: 1px; flex: none; }
+		.wcStashRow:hover .wcStashActions, .wcStashRow:focus-within .wcStashActions{ display: flex; }
+
+		/* ---------- commit details docked in the right column (#cdv is rendered by out.min.js) ---------- */
+		#cdv.docked{
+			left: auto !important; right: 0; top: var(--shell-top); bottom: 0; width: var(--rp-w); height: auto !important;
+			background: var(--panel-bg); border-left: 1px solid var(--rule); z-index: 6;
+		}
+		#cdv.docked .cdvHeightResize, #cdv.docked #cdvDivider{ display: none !important; }
 		#cdv.docked #cdvSummary{
-			top: 0 !important; left: 0 !important; right: 0 !important; width: auto !important;
-			bottom: auto !important; height: 180px !important;
-			border-right: none !important;
-			border-bottom: 1px solid var(--gg-menu-border);
-			overflow-y: auto;
+			top: 0 !important; left: 0 !important; right: 0 !important; width: auto !important; bottom: auto !important; height: 42% !important;
+			border-right: none !important; box-shadow: inset 0 -1px 0 var(--rule); overflow-y: auto;
 		}
 		#cdv.docked #cdvFiles{
-			top: 180px !important; left: 0 !important; right: 0 !important; width: auto !important;
-			bottom: 0 !important;
-			border-right: none !important;
+			top: 42% !important; left: 0 !important; right: 0 !important; width: auto !important; bottom: 0 !important; border-right: none !important;
 		}
 
-		/*
-		 * Working Copy panel (stage/unstage/commit + stash tab). Occupies the exact same fixed
-		 * box as #cdv.docked above; electron/panel.js toggles which one is visible depending on
-		 * whether a commit is currently expanded in the graph (see its MutationObserver).
-		 */
-		#wcPanel{
-			position: fixed; right: 0; top: 41px; bottom: 0; width: var(--cdv-panel-width);
-			background-color: var(--gg-editorWidget-background);
-			border-left: 1px solid var(--gg-menu-border);
-			display: flex; flex-direction: column;
-			font-size: 13px; z-index: 5; overflow: hidden;
-		}
-		.wcTabs{ display: flex; border-bottom: 1px solid var(--gg-menu-border); flex-shrink: 0; }
-		.wcTab{
-			flex: 1; padding: 8px 4px; text-align: center; cursor: pointer;
-			background: transparent; color: var(--gg-menu-foreground); border: none;
-			border-bottom: 2px solid transparent; font-size: 12px;
-		}
-		.wcTab.active{ color: var(--gg-editor-foreground); border-bottom-color: var(--gg-focusBorder); }
-		.wcTabContent{ flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
-		.wcSection{ border-bottom: 1px solid var(--gg-menu-border); flex-shrink: 0; max-height: 33%; display: flex; flex-direction: column; }
-		.wcSectionHeader{
-			display: flex; justify-content: space-between; align-items: center;
-			padding: 6px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
-			color: var(--gg-input-placeholderForeground); flex-shrink: 0;
-		}
-		.wcSmallBtn{
-			background: var(--gg-menu-background); color: var(--gg-menu-foreground);
-			border: 1px solid transparent; padding: 2px 8px; font-size: 11px; cursor: pointer; border-radius: 0;
-		}
-		.wcSmallBtn:hover{ background: #4a4a4a; }
-		.wcFileList{ list-style: none; margin: 0; padding: 0 0 6px 0; overflow-y: auto; }
-		.wcFileRow{
-			display: flex; align-items: center; gap: 6px; padding: 3px 10px; cursor: pointer;
-		}
-		.wcFileRow:hover{ background-color: rgba(128,128,128,0.15); }
-		.wcFileName{ flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-		.wcFileStats{ font-size: 11px; white-space: nowrap; }
-		.wcAdd{ color: var(--gg-gitDecoration-addedResourceForeground); margin-right: 4px; }
-		.wcDel{ color: var(--gg-gitDecoration-deletedResourceForeground); }
-		.wcFileAction{
-			background: transparent; color: var(--gg-menu-foreground); border: 1px solid var(--gg-menu-border);
-			width: 18px; height: 18px; line-height: 14px; padding: 0; cursor: pointer; border-radius: 0; flex-shrink: 0;
-		}
-		.wcFileAction:hover{ background: var(--gg-menu-selectionBackground); color: var(--gg-menu-selectionForeground); }
-		.wcEmpty{ padding: 6px 10px; color: var(--gg-input-placeholderForeground); font-style: italic; }
-		.wcCommitSection{ padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-		.wcCommitSection input[type="text"], .wcCommitSection textarea{
-			background: var(--gg-input-background); color: var(--gg-input-foreground);
-			border: 1px solid transparent; padding: 4px 6px; font-family: inherit; font-size: 12px; resize: vertical;
-		}
-		.wcCommitSection input[type="text"]:focus, .wcCommitSection textarea:focus{
-			outline: none; border-color: var(--gg-focusBorder);
-		}
-		.wcPushLabel{ font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; }
-		.wcCommitBtn{
-			background: var(--gg-focusBorder); color: #ffffff; border: none; padding: 6px; font-size: 12px;
-			cursor: pointer; border-radius: 0;
-		}
-		.wcCommitBtn:disabled{ background: var(--gg-menu-background); color: var(--gg-input-placeholderForeground); cursor: default; }
-		.wcMessage{ font-size: 11px; color: var(--gg-gitDecoration-addedResourceForeground); min-height: 14px; }
-		.wcMessage.wcError{ color: var(--gg-gitDecoration-deletedResourceForeground); }
-		.wcStashRow{ display: flex; align-items: center; gap: 6px; padding: 4px 10px; }
-		.wcStashMessage{ flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-		.wcStashActions{ display: flex; gap: 4px; flex-shrink: 0; }
-
-		/* Left sidebar (electron/sidebar.js) + conflict resolver (electron/conflicts.js). */
-		:root{ --sb-width: 240px; }
-		#view{ left: var(--sb-width) !important; }
-		#sidebar{
-			position: fixed; left: 0; top: 0; bottom: 0; width: var(--sb-width);
-			background-color: var(--gg-editorWidget-background);
-			border-right: 1px solid var(--gg-menu-border);
-			display: flex; flex-direction: column; font-size: 12px; z-index: 5; overflow: hidden;
-		}
-		#sbTop{ display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--gg-menu-border); flex-shrink: 0; }
-		#sbFilter{
-			flex: 1; min-width: 0; background: var(--gg-input-background); color: var(--gg-input-foreground);
-			border: 1px solid var(--gg-menu-border); padding: 3px 6px; font-size: 12px;
-		}
-		#sbFilter:focus{ outline: none; border-color: var(--gg-focusBorder); }
-		#sbScroll{ flex: 1; overflow-y: auto; min-height: 0; }
-		.sbHeader{
-			padding: 5px 8px; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: .04em;
-			cursor: pointer; user-select: none; background: rgba(128,128,128,0.12); display: flex; align-items: center;
-		}
-		.sbCaret{ width: 12px; }
-		.sbCount{ margin-left: auto; color: var(--gg-input-placeholderForeground); font-weight: 400; }
-		.sbList{ list-style: none; margin: 0; padding: 0; }
-		.sbRow{ display: flex; align-items: center; padding: 3px 8px 3px 20px; cursor: default; }
-		.sbRow:hover{ background: rgba(128,128,128,0.18); }
-		.sbRow.sbCurrent{ font-weight: 600; color: var(--gg-textLink-foreground); }
-		.sbDot{ font-size: 8px; margin-right: 5px; margin-left: -12px; }
-		.sbLabel{ flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-		.sbActions{ display: none; gap: 2px; flex-shrink: 0; }
-		.sbRow:hover .sbActions{ display: flex; }
-		.sbBtn{ background: var(--gg-menu-background); color: var(--gg-menu-foreground); border: 0; padding: 0 5px; font-size: 11px; cursor: pointer; line-height: 16px; }
-		.sbBtn:hover{ background: var(--gg-menu-selectionBackground); color: var(--gg-menu-selectionForeground); }
-		.sbRemoteName{ padding: 4px 8px 2px 14px; color: var(--gg-input-placeholderForeground); font-size: 11px; }
-		.sbEmpty{ padding: 4px 20px; font-style: italic; color: var(--gg-input-placeholderForeground); }
-
-		/* out.min.css hides every checkbox (it uses .customCheckbox spans); the panel uses plain ones. */
-		.wcPushLabel input[type="checkbox"]{ position: static; width: 14px; height: 14px; opacity: 1; margin: 0; }
-		#sbConflicts{ border-bottom: 2px solid #d98500; background: rgba(217,133,0,0.12); padding: 6px 8px; flex-shrink: 0; max-height: 40%; overflow-y: auto; }
-		.cfTitle{ font-weight: 600; color: #e2a03f; }
-		.cfSub{ margin: 2px 0 4px; color: var(--gg-input-placeholderForeground); }
-		.cfList{ list-style: none; margin: 0 0 6px; padding: 0; }
-		.cfFile{ padding: 2px 4px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gg-gitDecoration-deletedResourceForeground); }
-		.cfFile:hover{ background: rgba(128,128,128,0.2); }
-		.cfButtons{ display: flex; gap: 4px; }
-		.cfButtons button:disabled{ opacity: .45; cursor: default; }
-		.cfMessage{ color: var(--gg-gitDecoration-deletedResourceForeground); font-size: 11px; margin-top: 4px; }
-
+		/* ---------- conflict editor overlay (conflicts.js) ---------- */
 		#cfOverlay{
-			position: fixed; inset: 0; z-index: 50; display: none; flex-direction: column;
-			background: var(--gg-editor-background);
+			position: fixed; left: 0; right: 0; bottom: 0; top: var(--shell-top); z-index: 50; display: none; flex-direction: column;
+			background: var(--color-bg); animation: gg-fade var(--dur) ease;
 		}
-		#cfBar{ display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--gg-menu-border); flex-shrink: 0; }
-		#cfEditorTitle{ font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-		#cfStatus{ color: var(--gg-input-placeholderForeground); }
-		#cfSaveBtn{ background: var(--gg-focusBorder); color: #fff; border: 0; padding: 4px 12px; cursor: pointer; }
+		#cfBar{ display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 12px 0 16px; flex: none; box-shadow: inset 0 -1px 0 var(--rule); background: var(--panel-bg); }
+		#cfBar > [data-icon]{ width: 16px; height: 16px; color: var(--color-warning); }
+		#cfEditorTitle{ font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 0 1 auto; }
+		#cfEditorTitle .dir{ color: var(--color-muted); font-weight: 400; }
+		#cfStatus{ flex: none; }
+		#cfStatus:empty{ display: none; }
+		.cfSpacer{ flex: 1; }
+		.cfWhole{ display: flex; align-items: center; gap: 6px; flex: none; }
+		.cfWhole > span{ font-size: 12px; color: var(--color-muted); }
+		#cfBar .btn{ height: 30px; }
 		#cfEditorBody{ flex: 1; display: flex; flex-direction: column; min-height: 0; }
-		.cfHunks{ flex: 0 0 50%; overflow-y: auto; padding: 8px 12px; border-bottom: 1px solid var(--gg-menu-border); }
-		.cfNote{ padding: 10px 12px; } .cfErr{ color: var(--gg-gitDecoration-deletedResourceForeground); }
-		.cfHunk{ border: 1px solid var(--gg-menu-border); margin-bottom: 8px; }
-		.cfHunk.cfOpen{ border-color: #d98500; }
-		.cfHunkHead{ display: flex; align-items: center; padding: 4px 8px; background: rgba(128,128,128,0.15); font-weight: 600; }
-		.cfChoices{ margin-left: auto; display: flex; gap: 4px; }
-		.cfActive{ background: var(--gg-focusBorder) !important; color: #fff; }
-		.cfPanes{ display: flex; }
+		.cfHunks{ flex: 0 1 auto; max-height: 62%; overflow-y: auto; padding: 14px 16px 6px; min-height: 0; }
+		.cfNote{ padding: 16px; color: var(--color-muted); }
+		.cfErr{ color: var(--color-danger); }
+		.cfHunk{ margin-bottom: 12px; border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-sm); overflow: hidden; }
+		.cfHunk.cfOpen{ box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 55%, transparent); }
+		.cfHunkHead{ display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 10px 8px 12px; }
+		.cfHunkHead > b{ font-weight: 500; }
+		.cfHunkHead .seg{ margin-left: auto; }
+		.cfHunkHead .seg-opt{ padding: 4px 10px; }
+		.cfPanes{ display: flex; box-shadow: inset 0 1px 0 var(--rule); }
 		.cfPane{ flex: 1; min-width: 0; }
-		.cfPane + .cfPane{ border-left: 1px solid var(--gg-menu-border); }
-		.cfPaneTitle{ padding: 3px 8px; font-size: 11px; color: var(--gg-input-placeholderForeground); }
-		.cfPane pre{ margin: 0; padding: 4px 8px; font-family: Consolas, monospace; font-size: 12px; overflow-x: auto; white-space: pre; }
-		.cfOurs pre{ background: rgba(0,133,217,0.14); } .cfTheirs pre{ background: rgba(0,217,10,0.12); }
-		.cfOutputWrap{ flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0 12px 12px; }
-		#cfOutput{
-			flex: 1; resize: none; background: var(--gg-input-background); color: var(--gg-input-foreground);
-			border: 1px solid var(--gg-menu-border); font-family: Consolas, monospace; font-size: 12px; padding: 6px; white-space: pre; overflow: auto;
+		.cfPane + .cfPane{ box-shadow: inset 1px 0 0 var(--rule); }
+		.cfPaneTitle{ display: flex; align-items: center; gap: 6px; padding: 6px 12px; }
+		.cfPaneTitle::before{ content: ""; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--color-muted); flex: none; }
+		.cfOurs .cfPaneTitle::before{ border-color: var(--color-accent); }
+		.cfTheirs .cfPaneTitle::before{ border-color: var(--color-success); }
+		.cfPane pre{
+			margin: 0; padding: 8px 12px 10px; background: var(--color-sunken); font-family: var(--font-mono); font-size: 12px; line-height: 1.55;
+			overflow-x: auto; white-space: pre; max-height: 260px; overflow-y: auto;
 		}
+		.cfOurs pre{ box-shadow: inset 2px 0 0 var(--color-accent); }
+		.cfTheirs pre{ box-shadow: inset 2px 0 0 var(--color-success); }
+		.cfPane pre i{ color: var(--color-faint); }
+		.cfOutputWrap{ flex: 1; display: flex; flex-direction: column; min-height: 140px; padding: 8px 16px 16px; box-shadow: inset 0 1px 0 var(--rule); }
+		.cfOutputWrap > .shKicker{ padding: 4px 0 8px; }
+		#cfOutput{
+			flex: 1; resize: none; padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid var(--color-divider);
+			background: var(--color-sunken); color: var(--color-text); caret-color: var(--color-accent);
+			font-family: var(--font-mono); font-size: 12px; line-height: 1.55; white-space: pre; overflow: auto;
+		}
+		#cfOutput:focus-visible{ outline: 0; border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
+
+		/* ---------- themed confirm (GG.confirm below) - .dialog from nocturne.css, neutralising the graph renderer's own .dialog rule ---------- */
+		.gg-confirm .dialog{
+			position: static; left: auto; transform: none; z-index: auto; border: 0; text-align: left; line-height: 1.5; font-weight: 400; color: var(--color-text);
+			background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+		}
+		.gg-confirm .dialog-body{ white-space: pre-line; word-break: break-word; }
+		.gg-confirm{ z-index: 120; }
 	</style>
-	<link rel="stylesheet" href="theme.css">
 </head>
 <body>
+	<div id="scrollShadow"></div>
 	<div id="view" tabindex="-1">
 		<div id="controls">
 			<span id="repoControl"><span class="unselectable">Repo: </span><div id="repoDropdown" class="dropdown"></div></span>
@@ -284,74 +327,132 @@
 		</div>
 		<div id="footer"></div>
 	</div>
-	<div id="scrollShadow"></div>
-	<div id="sidebar">
-		<button type="button" id="sbHome" title="Back to all repositories (Ctrl+Shift+H)"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg><span>Repositories</span></button>
+
+	<nav id="sidebar" aria-label="Branches">
+		<button type="button" id="sbHome" title="Back to all repositories (Ctrl+Shift+H)"><i data-icon="arrow-left"></i><span>Repositories</span></button>
 		<div id="sbSync">
-			<div id="sbBranchLine" title=""><span class="sbBl-branch">-</span><span class="sbBl-arrow">→</span><span class="sbBl-up">no upstream</span></div>
+			<div id="sbBranchLine" class="noUpstream"><i data-icon="git-branch"></i><span class="sbBl-branch">&nbsp;</span><i class="sbBl-arrow" data-icon="arrow-right"></i><span class="sbBl-up"></span></div>
 			<div class="sbSyncBtns">
-				<button type="button" id="sbPull" class="sbSyncBtn" title="Pull (fetch and merge the upstream branch)"><svg viewBox="0 0 24 24"><path d="M12 4v13m0 0-5-5m5 5 5-5M5 21h14"/></svg><span>Pull</span><b class="sbBadge" hidden></b></button>
-				<button type="button" id="sbPush" class="sbSyncBtn" title="Push the current branch"><svg viewBox="0 0 24 24"><path d="M12 20V7m0 0-5 5m5-5 5 5M5 3h14"/></svg><span>Push</span><b class="sbBadge" hidden></b></button>
-				<button type="button" id="sbFetch" class="sbSyncBtn" title="Fetch all remotes"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg><span>Fetch</span></button>
+				<button type="button" id="sbPull" class="btn btn-secondary sbSyncBtn" title="Pull (fetch and merge the upstream branch)" disabled><i data-icon="arrow-down"></i><span>Pull</span><b class="sbBadge" hidden></b></button>
+				<button type="button" id="sbPush" class="btn btn-secondary sbSyncBtn" title="Push the current branch" disabled><i data-icon="arrow-up"></i><span>Push</span><b class="sbBadge" hidden></b></button>
+				<button type="button" id="sbFetch" class="btn btn-secondary sbSyncBtn" title="Fetch all remotes" disabled><i data-icon="arrows-clockwise"></i><span>Fetch</span></button>
 			</div>
 		</div>
-		<div id="sbTop"><input type="text" id="sbFilter" placeholder="Filter branches, tags, stashes"></div>
-		<div id="sbConflicts" style="display:none"></div>
-		<div id="sbScroll"><div id="sbBody"></div></div>
-	</div>
-	<div id="cfOverlay">
+		<div id="sbTop"><i data-icon="magnifying-glass"></i><input type="search" id="sbFilter" class="input" placeholder="Filter branches, tags" aria-label="Filter branches, tags and stashes" spellcheck="false" autocomplete="off"></div>
+		<div id="sbConflicts" role="region" aria-label="Conflicts" hidden></div>
+		<div id="sbScroll"><div id="sbBody"><div class="shSkel sbSkel" aria-hidden="true"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div></div></div>
+	</nav>
+
+	<div id="cfOverlay" role="dialog" aria-modal="true" aria-labelledby="cfEditorTitle">
 		<div id="cfBar">
+			<i data-icon="warning"></i>
 			<span id="cfEditorTitle"></span><span id="cfStatus"></span>
-			<button type="button" id="cfTakeOursBtn" class="wcSmallBtn" title="Resolve whole file with our version">Whole file: ours</button>
-			<button type="button" id="cfTakeTheirsBtn" class="wcSmallBtn" title="Resolve whole file with their version">Whole file: theirs</button>
-			<button type="button" id="cfSaveBtn" title="Write output and mark file resolved">Save &amp; mark resolved</button>
-			<button type="button" id="cfCloseBtn" class="wcSmallBtn">Close</button>
+			<span class="cfSpacer"></span>
+			<span class="cfWhole"><span>Whole file</span>
+				<button type="button" id="cfTakeOursBtn" class="btn btn-secondary btn-sm" title="Resolve the whole file with our version">Use ours</button>
+				<button type="button" id="cfTakeTheirsBtn" class="btn btn-secondary btn-sm" title="Resolve the whole file with their version">Use theirs</button>
+			</span>
+			<button type="button" id="cfSaveBtn" class="btn btn-primary btn-sm" title="Write the output and mark the file resolved (Ctrl+S)"><i data-icon="check"></i>Save &amp; mark resolved</button>
+			<button type="button" id="cfCloseBtn" class="btn btn-icon" title="Close (Esc)" aria-label="Close"><i data-icon="x"></i></button>
 		</div>
 		<div id="cfEditorBody"></div>
 	</div>
-	<div id="wcPanel">
-		<div class="wcTabs">
-			<button type="button" class="wcTab active" data-tab="workingCopy">Working Copy</button>
-			<button type="button" class="wcTab" data-tab="stash">Stash</button>
+
+	<aside id="wcPanel" aria-label="Working copy">
+		<div class="wcTabs" role="tablist">
+			<button type="button" class="wcTab active" data-tab="workingCopy" role="tab" aria-selected="true" aria-controls="wcTabWorkingCopy">Working copy <span class="wcTabCount" id="wcChangeCount"></span></button>
+			<button type="button" class="wcTab" data-tab="stash" role="tab" aria-selected="false" aria-controls="wcTabStash">Stash <span class="wcTabCount" id="wcStashCount"></span></button>
 		</div>
-		<div id="wcTabWorkingCopy" class="wcTabContent">
-			<div class="wcSection">
-				<div class="wcSectionHeader">
-					<span>Unstaged Changes</span>
-					<span><button type="button" id="wcDiscardAllBtn" class="wcSmallBtn" title="Discard all unstaged changes (including untracked files)">Discard All</button>
-					<button type="button" id="wcStageAllBtn" class="wcSmallBtn" title="Stage All Changes">Stage All</button></span>
+		<div id="wcTabWorkingCopy" class="wcTabContent" role="tabpanel">
+			<div class="wcLists">
+				<div id="wcClean" class="shEmpty" hidden><i data-icon="check-circle"></i><b>Working tree clean</b><span>Nothing to commit.</span></div>
+				<div class="wcSection" id="wcUnstagedSection">
+					<div class="wcSectionHeader">
+						<span class="shKicker">Unstaged</span>
+						<span><button type="button" id="wcDiscardAllBtn" class="shLink danger" title="Discard all unstaged changes (including untracked files)">Discard all</button>
+						<button type="button" id="wcStageAllBtn" class="shLink" title="Stage all changes">Stage all</button></span>
+					</div>
+					<ul id="wcUnstagedList" class="wcFileList"><li class="shSkel" aria-hidden="true"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></li></ul>
 				</div>
-				<ul id="wcUnstagedList" class="wcFileList"></ul>
-			</div>
-			<div class="wcSection">
-				<div class="wcSectionHeader">
-					<span>Staged Changes</span>
-					<button type="button" id="wcUnstageAllBtn" class="wcSmallBtn" title="Unstage All Changes">Unstage All</button>
+				<div class="wcSection" id="wcStagedSection">
+					<div class="wcSectionHeader">
+						<span class="shKicker">Staged</span>
+						<button type="button" id="wcUnstageAllBtn" class="shLink" title="Unstage all changes">Unstage all</button>
+					</div>
+					<ul id="wcStagedList" class="wcFileList"><li class="shSkel" aria-hidden="true"><div class="skeleton"></div><div class="skeleton"></div></li></ul>
 				</div>
-				<ul id="wcStagedList" class="wcFileList"></ul>
 			</div>
 			<div class="wcCommitSection">
 				<div class="wcSummaryRow">
-					<input type="text" id="wcSummaryInput" placeholder="Commit summary" maxlength="72">
-					<button type="button" id="wcAiBtn" class="wcAiBtn" title="Write the commit message with Claude Code (uses your staged changes)"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg></button>
+					<input type="text" id="wcSummaryInput" class="input" placeholder="Commit summary" maxlength="72" aria-label="Commit summary" spellcheck="false">
+					<button type="button" id="wcAiBtn" class="btn btn-primary wcAiBtn" title="Write the commit message with Claude Code (uses your staged changes)" aria-label="Write the commit message with Claude Code"><i data-icon="sparkle"></i></button>
 				</div>
-				<textarea id="wcDescriptionInput" placeholder="Description (optional)" rows="3"></textarea>
-				<label class="wcPushLabel"><input type="checkbox" id="wcAmendCheckbox"> Amend last commit (empty summary keeps its message)</label>
-				<label class="wcPushLabel"><input type="checkbox" id="wcPushCheckbox"> Push after commit</label>
-				<button type="button" id="wcCommitBtn" class="wcCommitBtn" disabled>Commit</button>
-				<div id="wcCommitMessageArea" class="wcMessage"></div>
+				<textarea id="wcDescriptionInput" class="input" placeholder="Description (optional)" rows="3" aria-label="Commit description"></textarea>
+				<div class="wcChecks">
+					<label class="check" title="Rewrite the last commit with the staged changes. An empty summary keeps its message."><input type="checkbox" id="wcAmendCheckbox"><span class="box"><i data-icon="check"></i></span>Amend last commit</label>
+					<label class="check"><input type="checkbox" id="wcPushCheckbox"><span class="box"><i data-icon="check"></i></span>Push after commit</label>
+				</div>
+				<button type="button" id="wcCommitBtn" class="btn btn-primary btn-block wcCommitBtn" disabled><i data-icon="git-commit"></i><span>Commit</span></button>
 			</div>
 		</div>
-		<div id="wcTabStash" class="wcTabContent" style="display:none">
-			<div class="wcSection" style="max-height:none; flex:1;">
-				<div class="wcSectionHeader">
-					<span>Stashes</span>
-					<button type="button" id="wcStashChangesBtn" class="wcSmallBtn" title="Stash all working copy changes">Stash Changes</button>
+		<div id="wcTabStash" class="wcTabContent" role="tabpanel" hidden>
+			<div class="wcLists">
+				<div class="wcSection">
+					<div class="wcSectionHeader">
+						<span class="shKicker">Stashes</span>
+						<button type="button" id="wcStashChangesBtn" class="shLink" title="Stash all working copy changes (including untracked files)">Stash changes</button>
+					</div>
+					<ul id="wcStashList" class="wcFileList"></ul>
 				</div>
-				<ul id="wcStashList" class="wcFileList"></ul>
 			</div>
 		</div>
-	</div>
+	</aside>
+
+	<script src="ui/icons.js"></script>
+	<script src="ui/titlebar.js"></script>
+	<script src="ui/toast.js"></script>
+	<script>
+		// Themed replacement for window.confirm(): GG.confirm({ title, message, confirm, danger }) -> Promise<boolean>.
+		// Enter confirms (the confirm button has focus), Esc / backdrop click cancels.
+		(function () {
+			'use strict';
+			var GG = window.GG = window.GG || {};
+			GG.confirm = function (opts) {
+				opts = typeof opts === 'string' ? { message: opts } : (opts || {});
+				return new Promise(function (resolve) {
+					var prev = document.activeElement;
+					var back = document.createElement('div');
+					back.className = 'dialog-backdrop gg-confirm';
+					back.innerHTML = '<div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="ggConfirmTitle" aria-describedby="ggConfirmBody">' +
+						'<h2 class="dialog-title" id="ggConfirmTitle"></h2><div class="dialog-body" id="ggConfirmBody"></div>' +
+						'<div class="dialog-actions"><button type="button" class="btn btn-secondary" data-r="0"></button><button type="button" class="btn" data-r="1"></button></div></div>';
+					back.querySelector('.dialog-title').textContent = opts.title || 'Are you sure?';
+					var body = back.querySelector('.dialog-body');
+					if (opts.message) body.textContent = opts.message; else body.remove();
+					var cancel = back.querySelector('[data-r="0"]'), ok = back.querySelector('[data-r="1"]');
+					cancel.textContent = opts.cancel || 'Cancel';
+					ok.textContent = opts.confirm || 'OK';
+					ok.classList.add(opts.danger ? 'btn-danger' : 'btn-primary');
+					function done(v) {
+						document.removeEventListener('keydown', onKey, true);
+						back.remove();
+						if (prev && prev.focus) prev.focus();
+						resolve(v);
+					}
+					function onKey(e) {
+						if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); }
+						else if (e.key === 'Tab') { e.preventDefault(); (document.activeElement === ok ? cancel : ok).focus(); }
+					}
+					back.addEventListener('mousedown', function (e) { if (e.target === back) done(false); });
+					cancel.addEventListener('click', function () { done(false); });
+					ok.addEventListener('click', function () { done(true); });
+					document.addEventListener('keydown', onKey, true);
+					document.body.appendChild(back);
+					ok.focus();
+				});
+			};
+		})();
+	</script>
 	<script>
 		var initialState = {
 			config: {
@@ -393,7 +494,7 @@
 				"fetchAndPruneTags": false,
 				"fetchAvatars": false,
 				"graph": {
-					"colours": ["#0085d9", "#d9008f", "#00d90a", "#d98500", "#a300d9", "#ff0000", "#00d9cc", "#e138e8", "#85d900", "#dc5b23", "#6f24d6", "#ffcc00"],
+					"colours": ["#9184d9", "#6fb5c9", "#c79a6a", "#7fc79b", "#d98fa6", "#a8b86a", "#7a9fe0", "#c98ad9", "#6fc9b0", "#d9a06f", "#9aa0b8"],
 					"style": 0,
 					"grid": { "x": 16, "y": 24, "offsetX": 16, "offsetY": 12, "expandY": 250 },
 					"uncommittedChanges": 0
@@ -432,6 +533,5 @@
 	<script src="panel.js"></script>
 	<script src="sidebar.js"></script>
 	<script src="conflicts.js"></script>
-	<script src="fx.js"></script>
 </body>
 </html>

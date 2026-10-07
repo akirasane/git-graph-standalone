@@ -1,69 +1,91 @@
+/* Controls-bar dropdowns (repo / branches): outlined trigger + .gg-menu popover. The menu is positioned
+ * against the control wrapper (#repoControl / #branchControl); the trigger sizes to its value. */
+
 .dropdown{
 	display:none;
-	position:relative;
+	position:static;
+	min-width:0;
 	font-size:13px;
-	vertical-align:top;
-	margin-top:3px;
-	font-weight:normal;
+	font-weight:400;
 	text-align:left;
 }
 .dropdown.loaded{
-	display:inline-block;
+	display:inline-flex;
 }
 .dropdownCurrentValue{
-	background-color:rgba(128,128,128,0.1);
-	border:1px solid rgba(128,128,128,0.5);
-	border-radius:6px;
+	position:relative;
 	box-sizing:border-box;
-	height:26px;
-	line-height:24px;
-	padding-left:10px;
-	padding-right:20px;
+	max-width:260px;
+	height:30px;
+	line-height:28px;
+	padding:0 28px 0 11px;
+	border:1px solid var(--color-divider);
+	border-radius:var(--radius-md);
+	color:var(--color-text);
 	cursor:pointer;
 	-webkit-user-select:none;
 	user-select:none;
 	white-space:nowrap;
-	overflow-x:hidden;
+	overflow:hidden;
 	text-overflow:ellipsis;
+	transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 .dropdownCurrentValue:hover{
-	background-color:rgba(128,128,128,0.2);
+	background-color:var(--color-hover);
 }
 .dropdownCurrentValue:after{
 	position:absolute;
 	content:"";
-	top:11px;
-	right:7px;
-	width:0;
-	height:0;
-	border:4px solid transparent;
-	border-color:var(--gg-editor-foreground) transparent transparent transparent;
+	top:50%;
+	right:12px;
+	width:5px;
+	height:5px;
+	margin-top:-4px;
+	border:solid var(--color-muted);
+	border-width:0 1.5px 1.5px 0;
+	transform:rotate(45deg);
+	transition:transform var(--dur) var(--ease), margin-top var(--dur) var(--ease);
+}
+.dropdown.dropdownOpen .dropdownCurrentValue{
+	border-color:var(--color-accent);
+	box-shadow:0 0 0 1px var(--color-accent);
 }
 .dropdown.dropdownOpen .dropdownCurrentValue:after{
-	border-color:transparent transparent var(--gg-editor-foreground) transparent;
-	top:7px;
+	margin-top:-1px;
+	transform:rotate(-135deg);
 }
 
 .dropdownMenu{
 	display:none;
 	position:absolute;
-	background-color:var(--gg-menu-background);
-	color:var(--gg-menu-foreground);
-	top:100%;
+	top:calc(100% + 6px);
 	left:0;
+	min-width:100%;
+	width:max-content;
+	max-width:min(440px, calc(100vw - 48px));
+	max-height:320px;
+	overflow-y:auto;
+	box-sizing:border-box;
+	padding:4px;
+	background-color:var(--color-surface);
+	color:var(--color-text);
+	border-radius:var(--radius-md);
+	box-shadow:var(--shadow-md);
 	z-index:19;
-	line-height:20px;
-	border:1px solid rgba(128,128,128,0.5);
-	border-radius:0 0 6px 6px;
+	line-height:18px;
 	overflow-x:hidden;
-	margin-top:-1px;
 	white-space:nowrap;
+}
+.dropdown.dropdownOpen .dropdownMenu{
+	display:block;
+	animation:gg-pop 140ms var(--ease);
 }
 
 .dropdownOption{
 	position:relative;
 	cursor:pointer;
-	padding:4px 10px;
+	padding:6px 10px;
+	border-radius:var(--radius-sm);
 	-webkit-user-select:none;
 	user-select:none;
 	text-overflow:ellipsis;
@@ -76,76 +98,78 @@
 .dropdownOptions.showInfo .dropdownOption{
 	padding-right:30px;
 }
-.dropdownOption.selected{
-	background-color:rgba(128,128,128,0.15);
-}
 .dropdownOption:hover{
-	background-color:var(--gg-menu-selectionBackground, var(--gg-menu-background));
-	color:var(--gg-menu-selectionForeground, var(--gg-menu-foreground));
+	background-color:var(--color-hover);
+}
+.dropdownOption.selected{
+	color:var(--color-accent);
+	background-color:color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+.dropdownOption.selected:hover{
+	background-color:color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 .dropdownOptionHint{
-	opacity:0.6;
+	color:var(--color-muted);
 	margin-left:8px;
 }
-.dropdownOptionInfo{
+.dropdownOptionInfo, .dropdownOptionMultiSelected{
 	position:absolute;
+	display:grid;
+	place-items:center;
 	width:14px;
-	height:16px;
-	top:6px;
+	height:14px;
+	top:50%;
+	margin-top:-7px;
+}
+.dropdownOptionInfo{
 	right:10px;
+	color:var(--color-faint);
 }
-.dropdownOptionInfo svg{
-	fill:var(--gg-menu-foreground);
-	opacity:0.35;
+.dropdownOptionInfo:hover{
+	color:var(--color-text);
 }
-
 .dropdownOptionMultiSelected{
-	position:absolute;
-	width:12px;
-	height:16px;
-	top:7px;
 	left:10px;
+	color:var(--color-accent);
 }
-.dropdownOptionMultiSelected svg{
-	fill:var(--gg-menu-foreground);
-	opacity:0.7;
-}
-
-.dropdownOption:hover svg{
-	fill:var(--gg-menu-selectionForeground, var(--gg-menu-foreground));
-	opacity:0.85;
-}
-
-.dropdown.dropdownOpen .dropdownCurrentValue{
-	border-radius:6px 6px 0 0;
-}
-.dropdown.dropdownOpen .dropdownMenu{
-	display:block;
+.dropdownOptionInfo svg, .dropdownOptionMultiSelected svg{
+	width:14px;
+	height:14px;
+	fill:currentColor;
 }
 
 .dropdownFilter{
 	position:relative;
-	padding:3px 3px;
+	padding:2px 2px 4px;
 	-webkit-user-select:none;
 	user-select:none;
 }
 .dropdownFilterInput{
 	width:100%;
+	height:28px;
 	box-sizing:border-box;
-	background:none;
-	border:1px solid rgba(128,128,128,0.5);
+	padding:0 9px;
+	background:var(--color-surface);
+	border:1px solid var(--color-divider);
+	border-radius:var(--radius-sm);
 	outline:none;
-	border-radius:4px;
-	padding:3px 6px;
-	font-size:13px;
-	line-height:17px;
-	color:var(--gg-menu-foreground);
+	font:inherit;
+	font-size:12.5px;
+	color:var(--color-text);
+	caret-color:var(--color-accent);
+	transition:border-color var(--dur) var(--ease);
+}
+.dropdownFilterInput::placeholder{
+	color:var(--color-faint);
+}
+.dropdownFilterInput:focus{
+	border-color:var(--color-accent);
 }
 
 .dropdownNoResults{
 	position:relative;
-	padding:4px 10px;
+	padding:6px 10px 8px;
+	color:var(--color-muted);
 	-webkit-user-select:none;
 	user-select:none;
-	font-style:italic;
 }

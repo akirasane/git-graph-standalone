@@ -92,6 +92,7 @@ class Dialog {
 	private customSelects: { [inputIndex: string]: CustomSelect } = {};
 
 	private static readonly WHITESPACE_REGEXP = /\s/gu;
+	private static readonly DESTRUCTIVE_ACTION_REGEXP = /^(yes, )?(delete|drop|reset|clean|clear|discard|remove|force|prune|replace)\b/i;
 
 	/**
 	 * Show a confirmation dialog to the user.
@@ -219,7 +220,7 @@ class Dialog {
 			return '<tr' + (input.type === DialogInputType.Radio ? ' class="mediumField"' : input.type !== DialogInputType.Checkbox ? ' class="largeField"' : '') + '>' + (multiElement && !multiCheckbox ? '<td>' + input.name + ': </td>' : '') + inputHtml + '</tr>';
 		});
 
-		const html = message + (includeLineBreak ? '<br>' : '') +
+		const html = (includeLineBreak ? '<div class="dialogMessage">' + message + '</div>' : message) +
 			'<table class="dialogForm ' + (multiElement ? multiCheckbox ? 'multiCheckbox' : 'multi' : 'single') + '">' +
 			inputRowsHtml.join('') +
 			'</table>';
@@ -307,10 +308,11 @@ class Dialog {
 	 * @param actioned An optional callback to be invoked when the primary action is triggered.
 	 */
 	public showError(message: string, reason: GG.ErrorInfo, actionName: string | null, actioned: (() => void) | null) {
-		this.show(DialogType.Message, '<span class="dialogAlert">' + SVG_ICONS.alert + 'Error: ' + message + '</span>' + (reason !== null ? '<br><span class="messageContent errorContent">' + escapeHtml(reason).split('\n').join('<br>') + '</span>' : ''), actionName, 'Dismiss', () => {
+		this.show(DialogType.Message, '<span class="dialogAlert">' + SVG_ICONS.alert + 'Error: ' + message + '</span>' + (reason !== null ? '<span class="messageContent errorContent">' + escapeHtml(reason).split('\n').join('<br>') + '</span>' : ''), actionName, 'Dismiss', () => {
 			this.close();
 			if (actioned !== null) actioned();
 		}, null, null);
+		if (this.elem !== null) this.elem.classList.add('dialogError');
 	}
 
 	/**
@@ -338,18 +340,24 @@ class Dialog {
 		this.target = target;
 		eventOverlay.create('dialogBacking', null, null);
 
-		const dialog = document.createElement('div'), dialogContent = document.createElement('div');
-		dialog.className = 'dialog';
+		const dialog = document.createElement('div'), dialogContent = document.createElement('div'), dialogActions = document.createElement('div');
+		const destructive = actionName !== null && Dialog.DESTRUCTIVE_ACTION_REGEXP.test(actionName);
+		dialog.className = 'ggDialog'; // Not Nocturne's .dialog: the host page uses that for its own confirm dialogs
 		dialogContent.className = 'dialogContent';
-		dialogContent.innerHTML = html + '<br>' + (actionName !== null ? '<div id="dialogAction" class="roundedBtn">' + actionName + '</div>' : '') + '<div id="dialogSecondaryAction" class="roundedBtn">' + secondaryActionName + '</div>';
+		dialogContent.innerHTML = html;
+		dialogActions.className = 'dialogActions';
+		// Outlined actions, primary (or destructive) right-most
+		dialogActions.innerHTML = '<div id="dialogSecondaryAction" class="btn btn-secondary" role="button">' + secondaryActionName + '</div>' +
+			(actionName !== null ? '<div id="dialogAction" class="btn ' + (destructive ? 'btn-danger' : 'btn-primary') + '" role="button">' + actionName + '</div>' : '');
 		dialog.appendChild(dialogContent);
+		dialog.appendChild(dialogActions);
 		this.elem = dialog;
 		document.body.appendChild(dialog);
 
-		let docHeight = document.body.clientHeight, dialogHeight = dialog.clientHeight + 2;
+		let docHeight = document.body.clientHeight, dialogHeight = dialog.clientHeight;
 		if (type !== DialogType.Form && dialogHeight > 0.8 * docHeight) {
-			dialogContent.style.height = Math.round(0.8 * docHeight - 22) + 'px';
-			dialogHeight = Math.round(0.8 * docHeight);
+			dialogContent.style.height = Math.max(Math.round(0.8 * docHeight - (dialogHeight - dialogContent.clientHeight)), 60) + 'px';
+			dialogHeight = dialog.clientHeight;
 		}
 		dialog.style.top = Math.max(Math.round((docHeight - dialogHeight) / 2), 10) + 'px';
 		if (actionName !== null && actioned !== null) {

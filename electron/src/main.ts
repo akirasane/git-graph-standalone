@@ -8,11 +8,13 @@ import { GitGraphIpcHandler } from './ipc';
 import { HomeStore } from './homeStore';
 import { registerHomeIpc } from './homeIpc';
 import { Logger } from './logger';
-import { buildMenu } from './menu';
+import { HubAction, buildMenu } from './menu';
 import { RepoManager } from './repoManager';
 import { Store } from './store';
 import { RequestMessage } from './types';
 import { checkForUpdates, initAutoUpdater } from './updater';
+import { NOCTURNE, setDefaultUiParent, themedTitleBarOptions } from './uiWindow';
+import { registerChrome } from './chrome';
 import { GitExecutable, UNABLE_TO_FIND_GIT_MSG, findGit, getRepoName, showErrorMessage } from './utils';
 import { EventEmitter } from './utils/event';
 
@@ -31,8 +33,10 @@ function createWindow(page: string) {
 		height: 800,
 		minWidth: 960,
 		minHeight: 600,
-		backgroundColor: '#0b0d12',
+		backgroundColor: NOCTURNE.bg,
 		title: 'Git Graph',
+		// Nocturne title bar (ui/titlebar.js) with native window controls drawn over it.
+		...themedTitleBarOptions(),
 		webPreferences: {
 			preload: path.join(__dirname, 'preload.js'),
 			contextIsolation: true,
@@ -91,6 +95,8 @@ async function activate() {
 
 	const homeStore = new HomeStore(userDataPath);
 	const win = createWindow('home.html');
+	registerChrome(win);
+	setDefaultUiParent(win);
 	let onRepoPage = false;
 
 	/** The repository hub (first screen). */
@@ -117,7 +123,21 @@ async function activate() {
 	// Repo changes emitted while the graph page was still loading would otherwise be lost.
 	win.webContents.on('did-finish-load', () => {
 		if (onRepoPage && ipcHandler !== null) ipcHandler.resendRepos();
+		if (!onRepoPage && pendingHubAction !== null) {
+			win.webContents.send('home:action', pendingHubAction);
+			pendingHubAction = null;
+		}
 	});
+	/** Menu "Add / Clone / New repository" open the hub's own flows (switching to the hub first if needed). */
+	let pendingHubAction: HubAction | null = null;
+	const hubAction = (action: HubAction) => {
+		if (onRepoPage) {
+			pendingHubAction = action;
+			showHome();
+		} else {
+			win.webContents.send('home:action', action);
+		}
+	};
 	ipcMain.on('go-home', showHome);
 	registerHomeIpc(win, dataSource, repoManager, homeStore, () => gitExecutable !== null, openRepo);
 
@@ -127,7 +147,7 @@ async function activate() {
 	// Delayed so the update check never competes with the app's own initial repo-loading IPC traffic.
 	setTimeout(() => checkForUpdates(win, false), 5000);
 
-	Menu.setApplicationMenu(buildMenu(win, () => ipcHandler, dataSource, avatarManager, store, repoManager, () => gitExecutable, showHome));
+	Menu.setApplicationMenu(buildMenu(win, () => ipcHandler, dataSource, avatarManager, store, repoManager, () => gitExecutable, showHome, hubAction));
 
 	store.expireOldCodeReviews();
 	logger.log('Started Git Graph - Ready to use!');

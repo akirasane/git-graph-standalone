@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron';
+import * as fs from 'fs';
 import { AvatarManager } from './avatarManager';
 import { generateCommitMessage } from './claudeCli';
 import { DataSource, GitCommitDetailsData, GitConfigKey } from './dataSource';
@@ -95,7 +96,26 @@ export class GitGraphIpcHandler {
 	 * `ipcMain.on('git-graph-message', ...)`).
 	 */
 	public async handleMessage(msg: RequestMessage) {
-		this.repoFileWatcher.mute();
+		const readOnly = READ_ONLY_COMMANDS.has(msg.command);
+		this.repoFileWatcher.mute(readOnly);
+		try {
+			await this.respondToMessage(msg);
+		} catch (e) {
+			// Never leave the watcher muted (or the rejection unhandled) because one command threw.
+			console.error('Error handling "' + msg.command + '":', e);
+		} finally {
+			this.repoFileWatcher.unmute(readOnly);
+		}
+		if (!readOnly && !NO_REFRESH_COMMANDS.has(msg.command)) {
+			// The file watcher is muted while repository-changing commands run, and the graph view only
+			// refreshes after the ones it issued itself succeed - but the Working Copy panel / conflict
+			// resolver commands, and failed ones (e.g. a merge that stopped on conflicts), change the
+			// repository too. Tell every view (graph, panel, sidebar, conflict banner) to refresh.
+			this.sendMessage({ command: 'refresh' });
+		}
+	}
+
+	private async respondToMessage(msg: RequestMessage) {
 		let errorInfos: ErrorInfo[];
 
 		switch (msg.command) {
@@ -146,18 +166,15 @@ export class GitGraphIpcHandler {
 				const errors: ErrorInfo[] = [await this.dataSource.commitChanges(msg.repo, msg.summary, msg.description, msg.amend === true)];
 				let pushSkippedReason: string | null = null;
 				if (errors[0] === null && msg.push) {
-					const info = await this.dataSource.getRepoInfo(msg.repo, false, false, []);
-					if (info.head === null) {
+					// Same rules as the sidebar's Push button (pushes to the upstream branch, even when its
+					// name differs from the local branch's name).
+					const status = await this.dataSource.getSyncStatus(msg.repo);
+					if (status.branch === null) {
 						pushSkippedReason = 'The current branch could not be determined (e.g. a detached HEAD), so it was not pushed.';
+					} else if (status.upstream === null) {
+						pushSkippedReason = 'The current branch "' + status.branch + '" has no upstream remote configured, so it was not pushed.';
 					} else {
-						const cfg = await this.dataSource.getConfig(msg.repo, info.remotes);
-						const branchConfig = cfg.config !== null ? cfg.config.branches[info.head] : undefined;
-						const remote = branchConfig ? (branchConfig.pushRemote || branchConfig.remote) : null;
-						if (!remote) {
-							pushSkippedReason = 'The current branch "' + info.head + '" has no upstream remote configured, so it was not pushed.';
-						} else {
-							errors.push(await this.dataSource.pushBranch(msg.repo, info.head, remote, false, GitPushBranchMode.Normal));
-						}
+						errors.push((await this.dataSource.syncBranch(msg.repo, 'push')).error);
 					}
 				}
 				this.sendMessage({
@@ -426,6 +443,7 @@ export class GitGraphIpcHandler {
 			case 'fetch':
 				this.sendMessage({
 					command: 'fetch',
+					source: msg.source,
 					error: await this.dataSource.fetch(msg.repo, msg.name, msg.prune, msg.pruneTags)
 				});
 				break;
@@ -458,8 +476,12 @@ export class GitGraphIpcHandler {
 				this.loadRepoInfoRefreshId = msg.refreshId;
 				let repoInfo = await this.dataSource.getRepoInfo(msg.repo, msg.showRemoteBranches, msg.showStashes, msg.hideRemotes), isRepo = true;
 				if (repoInfo.error) {
-					isRepo = (await this.dataSource.repoRoot(msg.repo)) !== null;
-					if (!isRepo) repoInfo.error = null;
+					// A repository whose folder was moved/deleted while open: report it rather than letting the
+					// view ask for a repo-list check, which would drop EVERY unavailable repository from the list
+					// (the hub keeps them, showing "Folder not found", until the user removes them).
+					if ((await this.dataSource.repoRoot(msg.repo)) === null) {
+						repoInfo.error = 'The folder "' + msg.repo + '" ' + (fs.existsSync(msg.repo) ? 'is no longer a Git repository.' : 'no longer exists (it may have been moved, renamed or deleted).');
+					}
 				}
 				this.sendMessage({
 					command: 'loadRepoInfo',
@@ -663,11 +685,23 @@ export class GitGraphIpcHandler {
 				});
 				break;
 		}
-
-		this.repoFileWatcher.unmute();
 	}
 
 	private sendMessage(msg: ResponseMessage) {
+		// The window may have been closed while a (long) git command was still running.
+		if (this.win.isDestroyed() || this.win.webContents.isDestroyed()) return;
 		this.win.webContents.send('git-graph-message', msg);
 	}
 }
+
+/** Commands that never change the repository (at most `git status` rewriting .git/index). */
+const READ_ONLY_COMMANDS: ReadonlySet<string> = new Set([
+	'commitDetails', 'compareCommits', 'copyFilePath', 'copyToClipboard', 'endCodeReview', 'fetchAvatar',
+	'generateCommitMessage', 'getConflictFile', 'getConflicts', 'getStagedChanges', 'getSyncStatus', 'getUnstagedChanges',
+	'loadCommits', 'loadConfig', 'loadRepoInfo', 'loadRepos', 'openExtensionSettings', 'openExternalDirDiff', 'openExternalUrl',
+	'openFile', 'openTerminal', 'setGlobalViewState', 'setRepoState', 'setWorkspaceViewState', 'showErrorMessage',
+	'startCodeReview', 'tagDetails', 'updateCodeReview', 'viewDiff', 'viewDiffWithWorkingFile', 'viewFileAtRevision', 'viewScm'
+]);
+
+/** Non-read-only commands that never change what the views display. */
+const NO_REFRESH_COMMANDS: ReadonlySet<string> = new Set(['createArchive', 'exportRepoConfig', 'rescanForRepos']);

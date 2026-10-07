@@ -74,6 +74,8 @@ const quote = (arg: string) => '"' + arg.replace(/"/g, '\\"') + '"';
 function runClaude(claudePath: string, model: string, cwd: string, prompt: string): Promise<string> {
 	return new Promise((resolve, reject) => {
 		const args = ['-p', '--safe-mode', '--tools', '', '--no-session-persistence'];
+		// The args may go through cmd.exe (below), where quoting can't neutralise every metacharacter.
+		if (model && !/^[\w.:\-\[\]]+$/.test(model)) return reject('The configured Claude model name "' + model + '" is not valid.');
 		if (model) args.push('--model', model);
 
 		// .cmd/.bat shims (npm installs on Windows) can only be started through a shell.
@@ -84,7 +86,9 @@ function runClaude(claudePath: string, model: string, cwd: string, prompt: strin
 		const timer = setTimeout(() => {
 			if (settled) return;
 			settled = true;
-			child.kill();
+			// Through a shell, child is cmd.exe: kill the whole tree or the real `claude` process lingers.
+			if (viaShell && process.platform === 'win32' && child.pid) cp.spawn('taskkill', ['/T', '/F', '/PID', String(child.pid)], { windowsHide: true }).on('error', () => child.kill());
+			else child.kill();
 			reject('Claude took too long to respond (over ' + TIMEOUT_MS / 1000 + 's).');
 		}, TIMEOUT_MS);
 

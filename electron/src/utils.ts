@@ -211,6 +211,14 @@ export function openExtensionSettings(): Promise<ErrorInfo> {
 }
 
 export async function openExternalUrl(url: string, type: string = 'External URL'): Promise<ErrorInfo> {
+	// URLs come from commit messages and from a repository's own .git-graph.json (issue linking / pull
+	// request templates), i.e. untrusted content: never hand file:, smb:, custom-protocol etc. URLs to the
+	// OS, which could launch local programs.
+	let protocol: string;
+	try { protocol = new URL(url).protocol; } catch (_) { protocol = ''; }
+	if (protocol !== 'https:' && protocol !== 'http:' && protocol !== 'mailto:') {
+		return 'Only http(s) and mailto links can be opened (' + type + ': ' + url + ').';
+	}
 	try {
 		await shell.openExternal(url);
 		return null;
@@ -292,14 +300,15 @@ export function openGitTerminal(cwd: string, gitPath: string, command: string | 
 
 /* Electron API Wrappers */
 
+/** Themed (Nocturne) message dialogs - see appDialog.ts. Imported lazily to keep utils.ts free of window code. */
 export async function showInformationMessage(message: string) {
-	const { dialog } = await import('electron');
-	await dialog.showMessageBox({ type: 'info', message, buttons: ['OK'] });
+	const { showAppDialog } = await import('./appDialog');
+	await showAppDialog({ type: 'info', title: 'Git Graph', message });
 }
 
 export async function showErrorMessage(message: string) {
-	const { dialog } = await import('electron');
-	await dialog.showMessageBox({ type: 'error', message, buttons: ['OK'] });
+	const { showAppDialog } = await import('./appDialog');
+	await showAppDialog({ type: 'error', title: 'Something went wrong', message });
 }
 
 

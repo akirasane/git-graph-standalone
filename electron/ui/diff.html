@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Diff</title>
+	<link rel="stylesheet" href="nocturne.css">
+	<link rel="stylesheet" href="window.css">
+	<script src="icons.js"></script>
+</head>
+<body class="uiw-fill uiw-window">
+	<header class="gg-titlebar uiw-diffbar" id="bar">
+		<span class="gg-titlebar-mark"><i data-icon="git-diff"></i></span>
+		<span class="uiw-file" id="file"></span>
+		<span class="uiw-path" id="path"></span>
+		<span class="tag tag-neutral" id="desc"></span>
+		<span class="uiw-spacer"></span>
+		<span class="uiw-stat" id="stat"></span>
+		<div class="seg" id="mode" role="radiogroup" aria-label="Diff layout" hidden>
+			<label class="seg-opt" title="Side by side"><input type="radio" name="mode" value="split" checked><i data-icon="columns"></i>Split</label>
+			<label class="seg-opt" title="Inline"><input type="radio" name="mode" value="inline"><i data-icon="rows"></i>Inline</label>
+		</div>
+	</header>
+	<div class="uiw-loading" id="loading">Loading...</div>
+	<div id="editor" hidden></div>
+	<script src="../node_modules/monaco-editor/min/vs/loader.js"></script>
+	<script src="diff.js"></script>
+</body>
+</html>

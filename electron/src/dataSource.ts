@@ -179,10 +179,15 @@ export class DataSource extends Disposable {
 	 */
 	public getCommits(repo: string, branches: ReadonlyArray<string> | null, maxCommits: number, showTags: boolean, showRemoteBranches: boolean, includeCommitsMentionedByReflogs: boolean, onlyFollowFirstParent: boolean, commitOrdering: CommitOrdering, remotes: ReadonlyArray<string>, hideRemotes: ReadonlyArray<string>, stashes: ReadonlyArray<GitStash>): Promise<GitCommitData> {
 		const config = getConfig();
-		return Promise.all([
-			this.getLog(repo, branches, maxCommits + 1, showTags && config.showCommitsOnlyReferencedByTags, showRemoteBranches, includeCommitsMentionedByReflogs, onlyFollowFirstParent, commitOrdering, remotes, hideRemotes, stashes),
+		return this.hasHeadCommit(repo).then((headExists) => Promise.all([
+			// An unborn HEAD (new repository, or a fresh orphan branch) can't be passed to `git log`.
+			headExists || branches !== null
+				? this.getLog(repo, branches, maxCommits + 1, showTags && config.showCommitsOnlyReferencedByTags, showRemoteBranches, includeCommitsMentionedByReflogs, onlyFollowFirstParent, commitOrdering, remotes, hideRemotes, stashes, headExists)
+				: this.spawnGit(['for-each-ref', '--count=1', '--format=%(refname)'], repo, (o) => o.trim()).then((anyRef) => anyRef === ''
+					? <GitCommitRecord[]>[]
+					: this.getLog(repo, branches, maxCommits + 1, showTags && config.showCommitsOnlyReferencedByTags, showRemoteBranches, includeCommitsMentionedByReflogs, onlyFollowFirstParent, commitOrdering, remotes, hideRemotes, stashes, false)),
 			this.getRefs(repo, showRemoteBranches, config.showRemoteHeads, hideRemotes).then((refData: GitRefData) => refData, (errorMessage: string) => errorMessage)
-		]).then(async (results) => {
+		])).then(async (results) => {
 			let commits: GitCommitRecord[] = results[0], refData: GitRefData | string = results[1], i;
 			let moreCommitsAvailable = commits.length === maxCommits + 1;
 			if (moreCommitsAvailable) commits.pop();
@@ -1528,7 +1533,7 @@ export class DataSource extends Disposable {
 	 * @param stashes An array of all stashes in the repository.
 	 * @returns An array of commits.
 	 */
-	private getLog(repo: string, branches: ReadonlyArray<string> | null, num: number, includeTags: boolean, includeRemotes: boolean, includeCommitsMentionedByReflogs: boolean, onlyFollowFirstParent: boolean, order: CommitOrdering, remotes: ReadonlyArray<string>, hideRemotes: ReadonlyArray<string>, stashes: ReadonlyArray<GitStash>) {
+	private getLog(repo: string, branches: ReadonlyArray<string> | null, num: number, includeTags: boolean, includeRemotes: boolean, includeCommitsMentionedByReflogs: boolean, onlyFollowFirstParent: boolean, order: CommitOrdering, remotes: ReadonlyArray<string>, hideRemotes: ReadonlyArray<string>, stashes: ReadonlyArray<GitStash>, includeHead: boolean = true) {
 		const args = ['-c', 'log.showSignature=false', 'log', '--max-count=' + num, '--format=' + this.gitFormatLog, '--' + order + '-order'];
 		if (onlyFollowFirstParent) {
 			args.push('--first-parent');
@@ -1556,7 +1561,7 @@ export class DataSource extends Disposable {
 			const stashBaseHashes = stashes.map((stash) => stash.baseHash);
 			stashBaseHashes.filter((hash, index) => stashBaseHashes.indexOf(hash) === index).forEach((hash) => args.push(hash));
 
-			args.push('HEAD');
+			if (includeHead) args.push('HEAD');
 		}
 		args.push('--');
 
@@ -1792,15 +1797,22 @@ export class DataSource extends Disposable {
 		return Promise.all([
 			this.execDiffPlain(repo, '--name-status').then((output) => this.parseDiffNameStatusRecords(output)),
 			this.execDiffPlain(repo, '--numstat').then((output) => this.parseDiffNumStatRecords(output)),
-			this.getStatus(repo)
-		]).then((results) => ({
+			this.getStatus(repo),
+			this.spawnGit(['diff', '--name-only', '--diff-filter=U', '-z'], repo, (out) => out.split('\0').filter((f) => f !== '').map(getPathFromStr))
+		]).then((results) => {
 			// Only merge in the untracked files from `getStatus` - its `deleted` bucket includes
 			// STAGED deletions (porcelain index column), which would otherwise be double-counted
 			// here as well as in getStagedChanges; worktree-side deletions already come back from
 			// the plain `git diff` above.
-			files: generateFileChanges(results[0], results[1], { deleted: [], untracked: results[2].untracked }),
-			error: null
-		})).catch((errorMessage) => ({ files: [], error: errorMessage }));
+			const files = generateFileChanges(results[0], results[1], { deleted: [], untracked: results[2].untracked });
+			// Unmerged files would otherwise show up as plain modifications (or not at all, e.g. deleted by us).
+			const unmerged = results[3];
+			files.forEach((file) => { if (unmerged.includes(file.newFilePath)) file.type = GitFileStatus.Conflicted; });
+			unmerged.filter((p) => !files.some((file) => file.newFilePath === p)).forEach((p) => {
+				files.unshift({ oldFilePath: p, newFilePath: p, type: GitFileStatus.Conflicted, additions: null, deletions: null });
+			});
+			return { files: files, error: null };
+		}).catch((errorMessage) => ({ files: [], error: errorMessage }));
 	}
 
 	/**
@@ -1892,12 +1904,13 @@ export class DataSource extends Disposable {
 			const gitDirRaw = await this.spawnGit(['rev-parse', '--git-dir'], repo, (out) => out.trim());
 			const gitDir = path.resolve(repo, gitDirRaw);
 			const has = (name: string) => fs.existsSync(path.join(gitDir, name));
+			const files = await this.spawnGit(['diff', '--name-only', '--diff-filter=U', '-z'], repo, (out) => out.split('\0').filter((f) => f !== ''));
 			const operation: ConflictOperation | null =
 				has('rebase-merge') || has('rebase-apply') ? 'rebase' :
 				has('CHERRY_PICK_HEAD') ? 'cherry-pick' :
 				has('REVERT_HEAD') ? 'revert' :
-				has('MERGE_HEAD') ? 'merge' : null;
-			const files = await this.spawnGit(['diff', '--name-only', '--diff-filter=U', '-z'], repo, (out) => out.split('\0').filter((f) => f !== ''));
+				has('MERGE_HEAD') ? 'merge' :
+				files.length > 0 ? 'resolve' : null;
 			return { operation: operation, files: files, error: null };
 		} catch (e) {
 			return { operation: null, files: [], error: String(e) };
@@ -1919,7 +1932,10 @@ export class DataSource extends Disposable {
 			const full = this.resolveRepoFile(repo, filePath);
 			if (!fs.existsSync(full)) return { content: null, error: null };
 			if (fs.statSync(full).size > 5 * 1024 * 1024) return { content: null, error: 'File is too large to resolve in the built-in editor.' };
-			return { content: fs.readFileSync(full, 'utf8'), error: null };
+			const data = fs.readFileSync(full);
+			// Same heuristic as git: a NUL byte in the first 8000 bytes means binary. Editing it as text would corrupt it.
+			if (data.subarray(0, 8000).includes(0)) return { content: null, error: 'This is a binary file - resolve it by taking our or their version of the whole file.' };
+			return { content: data.toString('utf8'), error: null };
 		} catch (e) {
 			return { content: null, error: String(e instanceof Error ? e.message : e) };
 		}
@@ -1952,6 +1968,13 @@ export class DataSource extends Disposable {
 	 */
 	public conflictOperation(repo: string, operation: ConflictOperation, action: 'continue' | 'abort' | 'skip'): Promise<ErrorInfo> {
 		const editor = ['-c', 'core.editor=true'];
+		if (operation === 'resolve') {
+			// Nothing to continue (the resolved files stay staged for the next commit); abort undoes the
+			// conflicting change (a conflicting stash pop keeps the stash, so nothing is lost).
+			return action === 'abort'
+				? this.runGitCommand(['reset', '--merge'], repo)
+				: Promise.resolve(action === 'skip' ? 'There is no operation to skip.' : null);
+		}
 		if (operation === 'merge') {
 			return action === 'abort'
 				? this.runGitCommand(['merge', '--abort'], repo)
@@ -1961,14 +1984,36 @@ export class DataSource extends Disposable {
 	}
 
 	/**
-	 * Clone a repository into a new sub-folder of `parentDir`.
-	 * @returns The cloned repository's path (or an error message).
+	 * Clone a repository into a new sub-folder of `parentDir`, streaming git's progress to `onProgress`
+	 * (phase, e.g. "Receiving objects", and its percentage when known).
+	 * @returns `result` resolves with the cloned repository's path (or an error message); `cancel` aborts.
 	 */
-	public cloneRepo(url: string, parentDir: string, folderName?: string): Promise<{ path: string | null, error: ErrorInfo }> {
-		const name = folderName || DataSource.repoNameFromUrl(url);
-		const target = path.join(parentDir, name);
-		return this.runGitCommand(['clone', '--', url, target], parentDir)
-			.then((error) => ({ path: error === null ? target.replace(/\\/g, '/') : null, error: error }));
+	public cloneRepo(url: string, parentDir: string, folderName: string, onProgress: (phase: string, percent: number | null, line: string) => void): { result: Promise<{ path: string | null, error: ErrorInfo }>, cancel: () => void } {
+		const target = path.join(parentDir, folderName || DataSource.repoNameFromUrl(url));
+		if (this.gitExecutable === null) return { result: Promise.resolve({ path: null, error: UNABLE_TO_FIND_GIT_MSG }), cancel: () => { } };
+		const args = ['clone', '--progress', '--', url, target];
+		this.logger.logCmd('git', args);
+		const proc = cp.spawn(this.gitExecutable.path, args, { cwd: parentDir, env: Object.assign({}, process.env, this.askpassEnv) });
+		let cancelled = false, stderrTail = '';
+		// `--progress` writes "Receiving objects:  45% (450/1000), 1.2 MiB | 800 KiB/s" lines to stderr, separated by \r.
+		proc.stderr.setEncoding('utf8');
+		proc.stderr.on('data', (chunk: string) => {
+			stderrTail = (stderrTail + chunk).slice(-4000);
+			const lines = chunk.split(/[\r\n]+/).map((l) => l.trim()).filter((l) => l !== '');
+			const last = lines[lines.length - 1];
+			if (!last) return;
+			const m = /^(?:remote:\s*)?([A-Za-z ]+):\s+(\d+)%/.exec(last);
+			onProgress(m ? m[1].trim() : last.replace(/^remote:\s*/, ''), m ? parseInt(m[2], 10) : null, last);
+		});
+		const result = new Promise<{ path: string | null, error: ErrorInfo }>((resolve) => {
+			proc.on('error', (err) => resolve({ path: null, error: err.message }));
+			proc.on('close', (code) => {
+				if (cancelled) resolve({ path: null, error: 'Clone cancelled.' });
+				else if (code === 0) resolve({ path: target.replace(/\\/g, '/'), error: null });
+				else resolve({ path: null, error: stderrTail.split(/[\r\n]+/).map((l) => l.trim()).filter((l) => l !== '' && !/^Cloning into /.test(l) && !/^(remote: )?\w[\w ]*:\s+\d+%/.test(l)).slice(-3).join('\n') || 'git clone failed.' });
+			});
+		});
+		return { result, cancel: () => { cancelled = true; proc.kill(); } };
 	}
 
 	/**
@@ -2035,10 +2080,24 @@ export class DataSource extends Disposable {
 		if (status.branch === null) return { message: '', error: 'HEAD is detached - check out a branch first.' };
 		if (status.remotes.length === 0) return { message: '', error: 'This repository has no remote. Add one in the repository settings first.' };
 
+		// Read the upstream from the branch config rather than splitting "remote/branch" at the first
+		// slash, which is wrong for remote names containing a slash.
+		let upstreamRemote: string | null = null, upstreamBranch: string | null = null;
+		if (status.upstream !== null) {
+			const getConfigValue = (key: string) => this.spawnGit(['config', '--get', key], repo, (o) => o.trim()).catch(() => '');
+			upstreamRemote = await getConfigValue('branch.' + status.branch + '.remote');
+			upstreamBranch = (await getConfigValue('branch.' + status.branch + '.merge')).replace(/^refs\/heads\//, '');
+			if (upstreamRemote === '' || upstreamBranch === '') {
+				const slash = status.upstream.indexOf('/');
+				upstreamRemote = status.upstream.substring(0, slash);
+				upstreamBranch = status.upstream.substring(slash + 1);
+			}
+			if (upstreamRemote === '.') return { message: '', error: 'The upstream of "' + status.branch + '" is the local branch "' + upstreamBranch + '" - there is no remote to ' + action + '.' };
+		}
+
 		if (action === 'push') {
 			if (status.upstream !== null) {
-				const slash = status.upstream.indexOf('/');
-				const remote = status.upstream.substring(0, slash), remoteBranch = status.upstream.substring(slash + 1);
+				const remote = upstreamRemote!, remoteBranch = upstreamBranch!;
 				const args = remoteBranch === status.branch ? ['push', remote, status.branch] : ['push', remote, status.branch + ':' + remoteBranch];
 				const error = await this.runGitCommand(args, repo);
 				return { message: error === null ? 'Pushed ' + status.branch + ' to ' + status.upstream : '', error: error };
@@ -2049,9 +2108,9 @@ export class DataSource extends Disposable {
 		}
 
 		if (status.upstream === null) return { message: '', error: 'This branch has no upstream yet - push it first.' };
-		const slash = status.upstream.indexOf('/');
-		const remote = status.upstream.substring(0, slash), remoteBranch = status.upstream.substring(slash + 1);
-		const rebaseConfigured = await this.spawnGit(['config', '--get', 'pull.rebase'], repo, (o) => o.trim() !== '').catch(() => false);
+		const remote = upstreamRemote!, remoteBranch = upstreamBranch!;
+		const isConfigured = (key: string) => this.spawnGit(['config', '--get', key], repo, (o) => o.trim() !== '').catch(() => false);
+		const rebaseConfigured = await isConfigured('branch.' + status.branch + '.rebase') || await isConfigured('pull.rebase');
 		const args = ['pull'];
 		if (!rebaseConfigured) args.push('--no-rebase');
 		if (getConfig().signCommits) args.push('-S');
@@ -2084,7 +2143,7 @@ export class DataSource extends Disposable {
 					if (head.startsWith('HEAD (no branch)')) {
 						summary.detached = true;
 					} else if (head.startsWith('No commits yet on ')) {
-						summary.branch = head.substring('No commits yet on '.length);
+						summary.branch = head.substring('No commits yet on '.length).split('...')[0].split(' ')[0];
 					} else {
 						summary.branch = head.split('...')[0].split(' ')[0];
 						const ahead = /ahead (\d+)/.exec(head), behind = /behind (\d+)/.exec(head);
@@ -2137,7 +2196,9 @@ export class DataSource extends Disposable {
 	 * @returns The ErrorInfo from the executed command.
 	 */
 	public async discardAllChanges(repo: string): Promise<ErrorInfo> {
-		return (await this.runGitCommand(['checkout', '--', '.'], repo)) || this.runGitCommand(['clean', '-f', '-d'], repo);
+		// With nothing tracked yet (e.g. a new repository), `checkout -- .` fails on the pathspec - skip it.
+		const hasTrackedFiles = await this.spawnGit(['ls-files', '-z'], repo, (out) => out !== '').catch(() => true);
+		return (hasTrackedFiles ? await this.runGitCommand(['checkout', '--', '.'], repo) : null) || this.runGitCommand(['clean', '-f', '-d'], repo);
 	}
 
 
@@ -2250,10 +2311,20 @@ export class DataSource extends Disposable {
 			if (this.gitExecutable === null) {
 				return reject(UNABLE_TO_FIND_GIT_MSG);
 			}
+			if (typeof repo !== 'string' || repo === '') {
+				// Never fall back to the app's own working directory.
+				return reject('No repository was specified.');
+			}
+			if (!fs.existsSync(repo)) {
+				// Otherwise spawn fails with a misleading "spawn git ENOENT" (as if Git were missing).
+				return reject('The folder "' + repo + '" no longer exists (it may have been moved, renamed or deleted).');
+			}
 
 			resolveSpawnOutput(cp.spawn(this.gitExecutable.path, args, {
 				cwd: repo,
-				env: Object.assign({}, process.env, this.askpassEnv)
+				// GIT_EDITOR: no command may ever wait on an interactive editor (e.g. core.editor = "code --wait"
+				// would otherwise block a commit / rebase --continue / revert --continue until the editor is closed).
+				env: Object.assign({}, process.env, this.askpassEnv, { GIT_EDITOR: 'true' })
 			})).then((values) => {
 				const status = values[0], stdout = values[1], stderr = values[2];
 				if (status.code === 0 || ignoreExitCode) {

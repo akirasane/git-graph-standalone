@@ -1,134 +1,161 @@
+/* Find widget: a floating surface pinned to the top-right of the graph area */
+
 .findWidget{
-	display:block;
+	display:flex;
+	align-items:center;
+	gap:2px;
 	position:fixed;
-	top:-42px;
-	right:28px;
-	height:34px;
-	padding:0 10px;
+	top:calc(var(--shell-top, 0px) + 54px);
+	right:calc(var(--rp-w, 0px) + 22px);
+	height:42px;
+	box-sizing:border-box;
+	padding:0 6px;
 	z-index:21;
-	background-color:var(--gg-editorWidget-background);
-	box-shadow:0 2px 8px var(--gg-widget-shadow);
-	line-height:34px;
+	background-color:var(--color-surface);
+	border-radius:var(--radius-md);
+	box-shadow:var(--shadow-md);
 	font-size:13px;
-	color:var(--gg-editorSuggestWidget-foreground);
-	fill:var(--gg-editorSuggestWidget-foreground);
-	fill-opacity:0.7;
+	color:var(--color-text);
 	white-space:nowrap;
+	opacity:0;
+	visibility:hidden;
+	transform:translateY(-6px);
+	pointer-events:none;
 }
 .findWidget.active{
-	top:0;
+	opacity:1;
+	visibility:visible;
+	transform:none;
+	pointer-events:auto;
 }
 .findWidget.transition{
-	transition:top .2s linear;
+	transition:opacity 160ms var(--ease), transform 160ms var(--ease), visibility 160ms;
 }
-.findWidget[data-error] #findInput, .findWidget[data-error]:after{
-	outline:1px solid var(--gg-inputValidation-errorBorder) !important;
-}
-.findWidget[data-error]:after{
-	content:attr(data-error);
-	position:relative;
-	display:block;
-	top:-5px;
-	left:0;
-	width:201px;
-	padding:5px;
-	font-size:12px;
-	line-height:16px;
-	background-color:var(--gg-inputValidation-errorBackground);
-	outline-offset:-1px !important;
-	white-space:normal;
+.findWidget svg{
+	width:15px;
+	height:15px;
+	fill:currentColor;
 }
 
 #findInput{
-	display:inline-block;
-	vertical-align:top;
-	margin-top:4px;
-	padding:5px 47px 5px 5px;
-	border:0;
-	height:16px;
-	width:159px;
-	background-color:var(--gg-input-background);
-	color:var(--gg-input-foreground);
+	width:236px;
+	height:30px;
+	box-sizing:border-box;
+	margin-right:4px;
+	padding:0 58px 0 10px;
+	background-color:var(--color-surface);
+	border:1px solid var(--color-divider);
+	border-radius:var(--radius-md);
+	color:var(--color-text);
+	caret-color:var(--color-accent);
+	font:inherit;
 	font-size:13px;
-	outline-offset:-1px !important;
+	outline:none;
+	transition:border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 #findInput:focus{
-	outline:1px solid var(--gg-focusBorder);
+	border-color:var(--color-accent);
+	box-shadow:0 0 0 1px var(--color-accent);
 }
 #findInput::placeholder{
-	color:var(--gg-input-placeholderForeground);
+	color:var(--color-faint);
+}
+.findWidget[data-error] #findInput{
+	border-color:var(--color-danger);
+	box-shadow:0 0 0 1px var(--color-danger);
+}
+.findWidget[data-error]:after{
+	content:attr(data-error);
+	position:absolute;
+	top:calc(100% + 6px);
+	left:6px;
+	width:236px;
+	box-sizing:border-box;
+	padding:6px 10px;
+	border-radius:var(--radius-sm);
+	background-color:var(--color-surface);
+	box-shadow:0 0 0 1px color-mix(in srgb, var(--color-danger) 55%, transparent), 0 6px 18px rgba(0,0,0,.55);
+	color:var(--color-danger);
+	font-size:12px;
+	line-height:16px;
+	white-space:normal;
 }
 
 .findModifier{
-	display:block;
 	position:absolute;
-	top:7px;
-	height:20px;
-	width:20px;
-	line-height:20px;
-	font-size:11px;
+	top:50%;
+	display:grid;
+	place-items:center;
+	width:24px;
+	height:22px;
+	margin-top:-11px;
+	border-radius:var(--radius-sm);
+	font-family:var(--font-mono, monospace);
+	font-size:11.5px;
+	color:var(--color-muted);
 	cursor:pointer;
 	-webkit-user-select:none;
 	user-select:none;
-	text-align:center;
-	color:var(--gg-input-foreground);
-	opacity:0.7;
+	transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.findModifier:hover{
+	color:var(--color-text);
+	background-color:var(--color-hover);
 }
 .findModifier.active, #findOpenCdv.active{
-	outline:1px solid var(--gg-inputOption-activeBorder);
-	outline-offset:-1px;
-	background-color:var(--gg-inputOption-activeBackground);
-}
-.findModifier:hover, .findModifier.active{
-	opacity:1;
+	color:var(--color-accent);
+	background-color:var(--color-accent-hover);
+	box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 60%, transparent);
 }
 #findCaseSensitive{
-	left:176px;
+	left:188px;
 }
 #findRegex{
-	left:198px;
-	font-size:12px;
+	left:213px;
 }
 
-#findPosition, #findPrev, #findNext, #findOpenCdv, #findClose{
+#findPosition{
 	display:inline-block;
+	min-width:72px;
+	padding:0 6px;
+	color:var(--color-muted);
+	font-size:12px;
+	font-variant-numeric:tabular-nums;
+	text-align:center;
 	-webkit-user-select:none;
 	user-select:none;
 }
-#findPosition{
-	min-width:75px;
-	margin-left:10px;
-}
 #findPrev, #findNext, #findOpenCdv, #findClose{
-	position:relative;
-	width:20px;
-	height:20px;
-	vertical-align:top;
-	margin:7px 0 0 6px;
+	display:grid;
+	place-items:center;
+	flex:none;
+	width:26px;
+	height:26px;
+	border-radius:var(--radius-sm);
+	color:var(--color-muted);
 	cursor:pointer;
+	-webkit-user-select:none;
+	user-select:none;
+	transition:background-color var(--dur) var(--ease), color var(--dur) var(--ease);
 }
-#findPrev svg, #findNext svg, #findOpenCdv svg{
-	position:absolute;
-	left:3px;
-	top:3px;
+#findPrev:hover, #findNext:hover, #findOpenCdv:hover, #findClose:hover{
+	color:var(--color-text);
+	background-color:var(--color-hover);
 }
-#findClose svg{
-	position:absolute;
-	left:2px;
-	top:2px;
-	width:16px !important;
-	height:16px !important;
-}
-#findPrev:hover, #findNext:hover, #findOpenCdv:hover, #findOpenCdv.active, #findClose:hover{
-	fill-opacity:1;
+#findOpenCdv{
+	margin-left:2px;
 }
 #findPrev.disabled, #findNext.disabled{
-	fill-opacity:0.3;
+	opacity:0.35;
 	cursor:default;
+}
+#findPrev.disabled:hover, #findNext.disabled:hover{
+	background-color:transparent;
 }
 
 .findMatch{
-	background-color:var(--git-graph-findMatch, transparent);
-	outline:1px solid var(--gg-editor-findMatchHighlightBorder, transparent);
-	outline-offset:-1px;
+	border-radius:2px;
+	background-color:color-mix(in srgb, var(--color-warning) 26%, transparent);
+	box-shadow:0 0 0 1px color-mix(in srgb, var(--color-warning) 40%, transparent);
+	color:var(--color-text);
 }

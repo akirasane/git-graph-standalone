@@ -1,265 +1,313 @@
+/* Repository settings: a raised panel (dialog surface) anchored to the top-right of the graph area */
+
 #settingsWidget{
 	display:block;
 	position:fixed;
-	top:-158px;
-	right:28px;
-	width:400px;
-	min-height:146px;
-	padding:0 10px 4px 10px;
+	top:calc(var(--shell-top, 0px) + 8px);
+	right:calc(var(--rp-w, 0px) + 12px);
+	width:440px;
+	max-width:calc(100vw - 24px);
+	max-height:calc(100vh - var(--shell-top, 0px) - 16px);
+	box-sizing:border-box;
+	padding:0 0 10px;
 	z-index:31;
-	background-color:var(--gg-editorWidget-background);
-	box-shadow:0 2px 8px var(--gg-widget-shadow);
-	line-height:17px;
+	background-color:var(--color-surface);
+	border-radius:var(--radius-lg);
+	box-shadow:var(--shadow-lg);
 	font-size:13px;
-	color:var(--gg-editorSuggestWidget-foreground);
-	fill:var(--gg-editorSuggestWidget-foreground);
-	fill-opacity:0.7;
+	line-height:20px;
+	color:var(--color-text);
 	-webkit-user-select:none;
 	user-select:none;
 	overflow-x:hidden;
 	overflow-y:auto;
-	max-height:90vh;
+	opacity:0;
+	visibility:hidden;
+	transform:translateY(-8px);
+	pointer-events:none;
 }
 #settingsWidget.active{
-	top:0;
+	opacity:1;
+	visibility:visible;
+	transform:none;
+	pointer-events:auto;
 }
 #settingsWidget.transition{
-	transition:top .2s linear;
+	transition:opacity 180ms var(--ease), transform 180ms var(--ease), visibility 180ms;
+}
+#settingsWidget svg{
+	fill:currentColor;
 }
 
 #settingsWidget h2{
-	margin:8px 10px;
-	padding:0;
-	font-size:16px;
+	margin:0;
+	padding:18px 56px 6px 20px;
+	font-family:var(--font-heading);
+	font-size:18px;
+	font-weight:var(--font-heading-weight);
 	line-height:24px;
-	text-align:center;
+	letter-spacing:-0.01em;
+	text-align:left;
 }
 
 .settingsSection{
 	position:relative;
-	padding:6px;
+	padding:14px 20px 12px;
 }
-.settingsSection.centered{
-	text-align:center;
+.settingsSection + .settingsSection:before{
+	content:'';
+	position:absolute;
+	top:0;
+	left:20px;
+	right:20px;
+	height:1px;
+	background:linear-gradient(to right, transparent, var(--color-divider) 32px, var(--color-divider) calc(100% - 32px), transparent);
 }
-.settingsSection.general{
-	padding-left:11px;
-	padding-right:11px;
+.settingsSection > span{
+	display:block;
+	font-size:12.5px;
+	line-height:18px;
+	color:var(--color-muted);
 }
 
 .settingsSection h3{
-	position:relative;
-	margin:5px 0;
+	margin:0 0 8px;
 	padding:0;
-	font-size:15px;
-	line-height:20px;
-	text-align:center;
+	font-size:10px;
+	font-weight:600;
+	letter-spacing:0.1em;
+	line-height:16px;
+	text-transform:uppercase;
+	text-align:left;
+	color:var(--color-muted);
 }
 
 .settingsSection > table{
 	width:100%;
 	border-collapse:collapse;
+	margin-bottom:4px;
 }
-
-.settingsSection:before, .settingsSection > table tr.lineAbove td:before, .settingsSection > table tr.lineBelow td:after, .settingsSection .settingsSectionButtons.lineAbove:before{
-	content:'';
-	position:absolute;
-	display:block;
-	left:0;
-	right:0;
-	height:1px;
-	background-color:var(--gg-editorSuggestWidget-foreground);
-	opacity:0.3;
-}
-.settingsSection:before, .settingsSection > table tr.lineAbove td:before, .settingsSection .settingsSectionButtons.lineAbove:before{
-	top:0;
-}
-.settingsSection > table tr.lineBelow td:after{
-	bottom:0;
-}
-.settingsSection > table tr.lineAbove td:before, .settingsSection > table tr.lineBelow td:after, .settingsSection .settingsSectionButtons.lineAbove:before{
-	opacity:0.15;
-}
-
 .settingsSection > table th, .settingsSection > table td{
 	position:relative;
-	text-align:center;
+	text-align:left;
 	white-space:nowrap;
+	vertical-align:middle;
 }
 .settingsSection > table th{
-	font-weight:bold;
-	padding:3px 5px;
+	padding:2px 8px 6px 0;
+	font-size:10.5px;
+	font-weight:500;
+	letter-spacing:0.06em;
+	text-transform:uppercase;
+	color:var(--color-faint);
 }
 .settingsSection > table td{
-	padding:0 5px 3px 5px;
+	height:28px;
+	padding:0 8px 0 0;
 }
 .settingsSection > table tr.lineAbove td{
-	padding-top:3px;
+	box-shadow:inset 0 1px 0 color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+.settingsSection.general > table tr:first-child td, .settingsSection > table tr:nth-child(2).lineAbove td{
+	box-shadow:none;
 }
 .settingsSection > table td.left{
-	text-align:left;
+	color:var(--color-muted);
+	font-size:12.5px;
 }
 .settingsSection > table td.leftWithEllipsis{
 	width:100%;
 	max-width:0;
 	overflow:hidden;
 	text-overflow:ellipsis;
-	text-align:left;
+	color:var(--color-text);
 }
 .settingsSection > table td.right{
 	text-align:right;
-}
-
-.settingsSection.general > table{
-	margin-bottom:4px;
-}
-.settingsSection.general > table td{
-	padding:5px !important;
+	padding-right:0;
 }
 
 .settingsSection .hideRemoteBtn{
-	position:relative;
-	display:inline-block;
-	width:13px;
-	height:13px;
-	margin-right:5px;
+	display:inline-grid;
+	place-items:center;
+	width:22px;
+	height:22px;
+	margin:0 4px 0 -4px;
+	border-radius:var(--radius-sm);
 	vertical-align:middle;
+	color:var(--color-muted);
 	cursor:pointer;
 }
 .settingsSection .hideRemoteBtn svg{
-	position:absolute;
-	top:0;
-	left:0;
+	width:14px;
+	height:14px;
 }
 
+.settingsSection > table td.btns{
+	white-space:nowrap;
+}
+.settingsSection > table td.btns br{
+	display:none;
+}
 .settingsSection > table td.btns div{
-	display:inline-block;
-	position:relative;
-	width:17px;
-	height:17px;
-	vertical-align:top;
+	display:inline-grid;
+	place-items:center;
+	width:26px;
+	height:26px;
+	border-radius:var(--radius-sm);
+	vertical-align:middle;
+	color:var(--color-muted);
 	cursor:pointer;
 }
-.settingsSection > table td.btns.remoteBtns div{
-	vertical-align:middle;
+.settingsSection > table td.btns div svg{
+	width:15px;
+	height:15px;
 }
-.settingsSection > table #editRepoName svg, .settingsSection > table #editInitialBranches svg, .settingsSection > table .editRemote svg{
-	position:absolute;
-	left:1.5px;
-	top:1.5px;
-	width:14px !important;
-	height:14px !important;
+.settingsSection .hideRemoteBtn:hover, .settingsSection > table td.btns div:hover{
+	color:var(--color-text);
+	background-color:var(--color-hover);
 }
-.settingsSection > table #deleteRepoName svg, .settingsSection > table #clearInitialBranches svg, .settingsSection > table .deleteRemote svg, .settingsSection > table .fetchRemote svg, .settingsSection > table .pruneRemote svg{
-	position:absolute;
-	left:0.5px;
-	top:0.5px;
-	width:16px !important;
-	height:16px !important;
+.settingsSection > table td.btns div.deleteRemote:hover, .settingsSection > table #deleteRepoName:hover, .settingsSection > table #clearInitialBranches:hover{
+	color:var(--color-danger);
+	background-color:var(--color-danger-bg);
 }
 
 .settingsSectionButtons{
+	display:flex;
+	flex-wrap:wrap;
+	gap:8px;
 	position:relative;
 	width:100%;
-	padding:2px 0;
-	text-align:center;
+	padding:8px 0 2px;
 }
-
+.settingsSectionButtons br{
+	display:none;
+}
 .settingsSectionButtons > div{
-	display:inline-block;
-	line-height:24px;
+	display:inline-flex;
+	align-items:center;
+	gap:6px;
+	height:28px;
+	box-sizing:border-box;
+	padding:0 11px;
+	border:1px solid var(--color-divider);
+	border-radius:var(--radius-md);
+	font-size:12.5px;
+	line-height:1;
+	color:var(--color-text);
 	cursor:pointer;
-	padding-right:6px;
+	transition:background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.settingsSectionButtons > div svg{
+	width:14px;
+	height:14px;
+	flex:none;
+	color:var(--color-muted);
+}
+.settingsSectionButtons > div:hover{
+	background-color:var(--color-hover);
+}
+.settingsSectionButtons > div:active{
+	background-color:var(--color-pressed);
+}
+.settingsSectionButtons > div.addBtn{
+	color:var(--color-accent);
+	border-color:var(--color-accent);
+}
+.settingsSectionButtons > div.addBtn svg{
+	color:currentColor;
+}
+.settingsSectionButtons > div.addBtn:hover{
+	background-color:var(--color-accent-hover);
+}
+.settingsSectionButtons > div.removeBtn{
+	color:var(--color-danger);
+	border-color:color-mix(in srgb, var(--color-danger) 70%, transparent);
+}
+.settingsSectionButtons > div.removeBtn svg{
+	color:currentColor;
+}
+.settingsSectionButtons > div.removeBtn:hover{
+	background-color:var(--color-danger-bg);
 }
 
 .settingsSection label{
-	display:inline-block;
-	margin:4px 0;
+	display:inline-flex;
+	align-items:center;
+	gap:8px;
+	margin:5px 0;
 	cursor:pointer;
 }
-
 .settingsSection .customCheckbox{
-	margin-right:6px;
-}
-
-.settingsSection label > input[type=checkbox]:checked ~ .customCheckbox:after{
-	border-color:var(--gg-editorSuggestWidget-foreground);
-}
-
-.settingsSectionButtons > div.editBtn svg{
-	vertical-align:top;
-	margin:6px;
-	width:12px !important;
-	height:12px !important;
-}
-.settingsSectionButtons > div.addBtn svg, .settingsSectionButtons > div.removeBtn svg, #openExtensionSettings svg, #exportRepositoryConfig svg{
-	vertical-align:top;
-	width:14px !important;
-	height:14px !important;
-	margin:5px;
-}
-#openExtensionSettings svg, #exportRepositoryConfig svg{
-	margin-top:6px;
-}
-#exportRepositoryConfig svg{
-	margin-right:7px;
+	margin-top:0;
 }
 
 #settingsLoading{
 	display:none;
 	position:absolute;
-	top:0;
+	top:20px;
 	left:0;
 	right:0;
-	height:24px;
 	z-index:32;
-	line-height:24px;
 	text-align:center;
+	color:var(--color-muted);
+}
+#settingsLoading span{
+	display:inline-flex;
+	align-items:center;
+	gap:8px;
+	padding:4px 12px;
+	border-radius:999px;
+	background:var(--color-surface);
+	box-shadow:var(--shadow-sm);
 }
 #settingsLoading svg{
-	display:inline-block;
-	width:15px !important;
-	height:20px !important;
-	margin-top:2px;
-	margin-right:8px;
-	vertical-align:top;
-	animation:loadingIconAnimation 2s linear infinite;
+	width:14px;
+	height:14px;
+	color:var(--color-accent);
 }
 
 #settingsClose{
 	position:absolute;
-	width:24px;
-	height:24px;
-	top:8px;
-	right:10px;
+	display:grid;
+	place-items:center;
+	width:28px;
+	height:28px;
+	top:16px;
+	right:14px;
+	border-radius:var(--radius-md);
+	color:var(--color-muted);
 	cursor:pointer;
 	z-index:33;
 }
+#settingsClose:hover{
+	color:var(--color-text);
+	background-color:var(--color-hover);
+}
 #settingsClose svg{
-	position:absolute;
-	left:4px;
-	top:4px;
-	width:16px !important;
-	height:16px !important;
+	width:16px;
+	height:16px;
 }
 
-.settingsSectionButtons > div:hover svg, .settingsSection .hideRemoteBtn:hover svg, .settingsSection > table td.btns div:hover svg, #settingsClose:hover{
-	fill-opacity:1;
-}
 #settingsWidget.loading #settingsContent{
-	opacity:0.1;
+	opacity:0.35;
 }
 #settingsWidget.loading #settingsLoading{
 	display:block;
 }
 
 #settingsWidget .settingsWidgetInfo{
+	display:inline-grid;
+	place-items:center;
+	margin-left:4px;
+	vertical-align:middle;
+	color:var(--color-faint);
 	cursor:help;
 }
+#settingsWidget .settingsWidgetInfo:hover{
+	color:var(--color-text);
+}
 #settingsWidget .settingsWidgetInfo > svg{
-	width:15px !important;
-	height:15px !important;
-	margin-top:-2px;
-	margin-left:5px;
-	vertical-align:middle;
+	width:14px;
+	height:14px;
 }

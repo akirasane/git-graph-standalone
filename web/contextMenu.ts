@@ -1,4 +1,5 @@
 const CLASS_CONTEXT_MENU_ACTIVE = 'contextMenuActive';
+const CONTEXT_MENU_DESTRUCTIVE_REGEXP = /^(delete|drop|reset|clean|discard)\b/i; // Actions rendered in the danger colour
 
 interface ContextMenuAction {
 	readonly title: string;
@@ -53,7 +54,7 @@ class ContextMenu {
 			let groupHtml = '';
 			for (let j = 0; j < actions[i].length; j++) {
 				if (actions[i][j].visible) {
-					groupHtml += '<li class="contextMenuItem" data-index="' + handlerId++ + '">' + (checked ? '<span class="contextMenuItemCheck">' + (actions[i][j].checked ? SVG_ICONS.check : '') + '</span>' : '') + actions[i][j].title + '</li>';
+					groupHtml += '<li class="contextMenuItem' + (CONTEXT_MENU_DESTRUCTIVE_REGEXP.test(actions[i][j].title) ? ' danger' : '') + '" data-index="' + handlerId++ + '">' + (checked ? '<span class="contextMenuItemCheck">' + (actions[i][j].checked ? SVG_ICONS.check : '') + '</span>' : '') + actions[i][j].title + '</li>';
 					handlers.push(actions[i][j].onClick);
 				}
 			}

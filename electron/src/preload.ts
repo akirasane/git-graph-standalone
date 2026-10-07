@@ -48,7 +48,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
 		remove: (repo: string) => invoke('home:remove', repo),
 		pin: (repo: string) => invoke('home:pin', repo),
 		reveal: (repo: string) => invoke('home:reveal', repo),
+		terminal: (repo: string) => invoke('home:terminal', repo),
+		copyPath: (repo: string) => invoke('home:copy-path', repo),
+		checkTarget: (parent: string, name: string) => invoke('home:check-target', parent, name),
+		cancelClone: () => invoke('home:cancel-clone'),
 		pathForFile: (file: File) => webUtils.getPathForFile(file),
-		onReposChanged: (cb: () => void) => { ipcRenderer.on('home:repos-changed', () => cb()); }
+		onReposChanged: (cb: () => void) => { ipcRenderer.on('home:repos-changed', () => cb()); },
+		onCloneProgress: (cb: (p: unknown) => void) => { ipcRenderer.on('home:clone-progress', (_e, p) => cb(p)); },
+		/** Menu "Add / Clone / New repository" (see main.ts hubAction). */
+		onAction: (cb: (action: string) => void) => { ipcRenderer.on('home:action', (_e, a) => cb(a)); }
+	},
+	/** Window chrome for ui/titlebar.js (see chrome.ts). */
+	chrome: {
+		state: () => invoke('chrome:state'),
+		menu: () => invoke('chrome:menu'),
+		run: (id: string) => invoke('chrome:menu-run', id),
+		onTitle: (cb: (title: string) => void) => { ipcRenderer.on('chrome:title', (_e, t) => cb(t)); }
 	}
 });

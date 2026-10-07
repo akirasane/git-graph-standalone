@@ -6,7 +6,7 @@ import { getConfigStore } from './configStore';
 import { ConfigChangeEvent, DataSource } from './dataSource';
 import { GitGraphIpcHandler } from './ipc';
 import { Logger } from './logger';
-import { addRepository, buildMenu } from './menu';
+import { addRepository, buildMenu, cloneRepository } from './menu';
 import { RepoManager } from './repoManager';
 import { Store } from './store';
 import { RequestMessage } from './types';
@@ -23,7 +23,7 @@ import { EventEmitter } from './utils/event';
 let mainWindow: BrowserWindow | null = null;
 let ipcHandler: GitGraphIpcHandler | null = null;
 
-function createWindow() {
+function createWindow(page: string) {
 	mainWindow = new BrowserWindow({
 		width: 1280,
 		height: 800,
@@ -34,7 +34,7 @@ function createWindow() {
 		}
 	});
 
-	mainWindow.loadFile(path.join(__dirname, '..', 'index.html'));
+	mainWindow.loadFile(path.join(__dirname, '..', page));
 
 	mainWindow.on('closed', () => {
 		mainWindow = null;
@@ -75,7 +75,26 @@ async function activate() {
 	const avatarManager = new AvatarManager(dataSource, store, logger);
 	const repoManager = new RepoManager(dataSource, store, config);
 
-	const win = createWindow();
+	// index.html's initialState is built from this (via preload's sendSync), replacing what used to be a
+	// hardcoded repo path. Must be registered before the window loads.
+	ipcMain.on('get-initial-state', (event) => {
+		event.returnValue = { repos: repoManager.getRepos(), lastActiveRepo: store.getLastActiveRepo() };
+	});
+
+	// With no known repositories the Git Graph frontend has nothing to render (it expects at least one),
+	// so show a small landing page instead and swap to the real UI as soon as a repository is added.
+	let showingLanding = Object.keys(repoManager.getRepos()).length === 0;
+	const win = createWindow(showingLanding ? 'norepos.html' : 'index.html');
+	repoManager.onDidChangeRepos((event) => {
+		if (showingLanding && Object.keys(event.repos).length > 0 && !win.isDestroyed()) {
+			showingLanding = false;
+			win.loadFile(path.join(__dirname, '..', 'index.html'));
+		}
+	});
+	// Repo changes emitted while the page was still loading would otherwise be lost.
+	win.webContents.on('did-finish-load', () => {
+		if (!showingLanding && ipcHandler !== null) ipcHandler.resendRepos();
+	});
 	ipcHandler = new GitGraphIpcHandler(win, dataSource, avatarManager, store, repoManager);
 
 	initAutoUpdater(win);
@@ -83,6 +102,10 @@ async function activate() {
 	setTimeout(() => checkForUpdates(win, false), 5000);
 
 	Menu.setApplicationMenu(buildMenu(win, () => ipcHandler, dataSource, avatarManager, store, repoManager, () => gitExecutable));
+
+	ipcMain.on('clone-repository', () => {
+		cloneRepository(win, repoManager, dataSource, () => gitExecutable);
+	});
 
 	ipcMain.on('add-repository', () => {
 		addRepository(win, repoManager, () => gitExecutable);

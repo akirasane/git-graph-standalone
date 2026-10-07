@@ -28,5 +28,8 @@ ipcRenderer.on('git-graph-message', (_event, message) => {
 
 /** Exposes the "Add Repository" folder-picker as an in-page button, separate from the app menu. */
 contextBridge.exposeInMainWorld('electronAPI', {
-	addRepository: () => ipcRenderer.send('add-repository')
+	addRepository: () => ipcRenderer.send('add-repository'),
+	cloneRepository: () => ipcRenderer.send('clone-repository'),
+	/** Repos known to the main process at window-load time, read synchronously so index.html's initialState is real. */
+	initial: ipcRenderer.sendSync('get-initial-state') as { repos: unknown, lastActiveRepo: string | null }
 });

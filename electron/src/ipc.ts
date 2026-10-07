@@ -64,6 +64,16 @@ export class GitGraphIpcHandler {
 		});
 	}
 
+	/** Re-send the current repo list to the renderer (used after a page load, in case an earlier send was missed). */
+	public resendRepos() {
+		this.sendMessage({
+			command: 'loadRepos',
+			repos: this.repoManager.getRepos(),
+			lastActiveRepo: this.store.getLastActiveRepo(),
+			loadViewTo: null
+		});
+	}
+
 	/** The refreshId of the most recent `loadRepoInfo` request - used by main.ts when rebuilding the initial page state. */
 	get lastLoadRepoInfoRefreshId() {
 		return this.loadRepoInfoRefreshId;

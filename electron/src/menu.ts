@@ -105,7 +105,7 @@ export async function addRepository(win: BrowserWindow, repoManager: RepoManager
 	}
 }
 
-async function cloneRepository(win: BrowserWindow, repoManager: RepoManager, dataSource: DataSource, getGitExecutable: () => GitExecutable | null) {
+export async function cloneRepository(win: BrowserWindow, repoManager: RepoManager, dataSource: DataSource, getGitExecutable: () => GitExecutable | null) {
 	if (getGitExecutable() === null) {
 		showErrorMessage('Unable to find a Git executable.');
 		return;

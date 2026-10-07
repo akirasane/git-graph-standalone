@@ -410,31 +410,10 @@
 				"showStashes": true,
 				"showTags": true
 			},
-			lastActiveRepo: "D:\\Development_Projects\\vscode-git-graph",
+			// Real repo list supplied synchronously by the main process (see preload.ts / main.ts).
+			lastActiveRepo: window.electronAPI.initial.lastActiveRepo,
 			loadViewTo: null,
-			repos: {
-				"D:\\Development_Projects\\vscode-git-graph": {
-					cdvDivider: 0.5,
-					cdvHeight: 250,
-					columnWidths: null,
-					commitOrdering: "default",
-					fileViewType: 0,
-					hideRemotes: [],
-					includeCommitsMentionedByReflogs: 0,
-					issueLinkingConfig: null,
-					lastImportAt: 0,
-					name: null,
-					onlyFollowFirstParent: 0,
-					onRepoLoadShowCheckedOutBranch: 0,
-					onRepoLoadShowSpecificBranches: null,
-					pullRequestConfig: null,
-					showRemoteBranches: true,
-					showRemoteBranchesV2: 0,
-					showStashes: 0,
-					showTags: 0,
-					workspaceFolderIndex: null
-				}
-			},
+			repos: window.electronAPI.initial.repos,
 			loadRepoInfoRefreshId: 0,
 			loadCommitsRefreshId: 0
 		};
